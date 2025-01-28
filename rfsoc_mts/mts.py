@@ -77,7 +77,7 @@ class mtsOverlay(Overlay):
             self.ACTIVE_DAC_TILES = ZCU208_DAC_TILES
             self.ACTIVE_ADC_TILES = ZCU208_ADC_TILES
         else:
-            assert false, "Board Not Supported"
+            assert False, "Board Not Supported"
         time.sleep(0.5)        
         super().__init__(resolve_binary_path(bitfile_name), **kwargs)
         self.xrfdc = self.usp_rf_data_converter_1       
@@ -91,6 +91,7 @@ class mtsOverlay(Overlay):
         
         # DAC Player Memory - DACs will play this waveform
         self.dac_player = self.memdict_to_view("hier_dac_play/axi_bram_ctrl_0")
+        self.dac_player2 = self.memdict_to_view("hier_dac_play1/axi_bram_ctrl_0")
    
         # DAC Capture Memory - to verify DAC AWG for diagnostics
         self.dac_capture = self.memdict_to_view("hier_dac_cap/axi_bram_ctrl_0")
@@ -98,7 +99,6 @@ class mtsOverlay(Overlay):
         # ADC Capture Memories
         self.adc_capture_chA = self.memdict_to_view("hier_adc0_cap/axi_bram_ctrl_0")
         self.adc_capture_chB = self.memdict_to_view("hier_adc1_cap/axi_bram_ctrl_0")        
-        self.adc_capture_chC = self.memdict_to_view("hier_adc2_cap/axi_bram_ctrl_0")
         
         # Reset GPIOs and bring to known state
         self.dac_enable.off()
@@ -187,7 +187,6 @@ class mtsOverlay(Overlay):
         self.trigger_capture()
         triplebuffer[0] = np.copy(self.adc_capture_chA[0:len(triplebuffer[0])])
         triplebuffer[1] = np.copy(self.adc_capture_chB[0:len(triplebuffer[1])])
-        triplebuffer[2] = np.copy(self.adc_capture_chC[0:len(triplebuffer[2])])
 
     def dram_capture(self, buffer):
         """ Captures ADC samples to the PL-DRAM memory notebook provided buffer """
