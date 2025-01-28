@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./PYNQ/sdbuild/packages/xrfclk/package",
+        "./PYNQ/sdbuild/packages/xrfdc/package"
+    ]
+}
