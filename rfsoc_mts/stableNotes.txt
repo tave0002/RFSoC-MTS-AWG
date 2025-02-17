@@ -1,0 +1,30 @@
+This stable version is a copy of the MTS overlay with the following changes
+Within the RFDC block
+- The samples per cycle for all DACs were changed to 16 samples per cycle,
+- The sample rate for all DACs was set to 8GHz
+- All DACs "Clock Source" were set to "Tile 230"
+- The fabric clock should be 500 MHz for all DACs
+- All ADCs were disabled
+- DAC_B (tile 228) was set to operate in the second nyquist zone using in the analog settings
+
+Within the hier_dac_play block
+- The axis_bram_ctrl, BMG, DACRAMstreamer, and clock convertor all had their bus widths set to 64 bytes (512 bits)
+- The dwidth input width was changed to 64 bytes and the output to 32 bytes
+- The register slice input and output bus size was changed to 32 bytes
+- The DACRAMStreamer memory size parameter was changed to 1048576 (to reflect a size of 1MB)
+- The constant block connected to the DACRAMStreamer had the width changed to 14 and the value to 0x3FFF (to match 1MB)
+- the read latency on both axis_bram_ctrl and block_mem_generators (both ports A and B) was set to 4 to resolve a critical warning generated in version 19.
+    - Another critical warning
+      was present when generating version 20 that does not appear when generating the clean mts overlay. 
+      However it is not a problem as the warning pertains to the .xdr file for mts setting propeties of the 
+      adc capture blocks which have been deleted and as such it is just worried it's trying to set a param
+      to a non-existance thing. This doesn't effect operation of the DAC
+
+Additional changes
+- The axis_broadcaster has been deleted, and the hier_dac_player routed to dac tile 230 (s20)
+- A copy of hier_dac_play named "hier_dac_play1" was created and connecte to dac tile 228 (s00) and the M04AXI port of the internalRamInterconnect 
+- All ADC blocks and the hier_dac_capture block were deleted to allow for more memory space in the DAC buffer
+
+Within the memory address editor
+- hier_dac_play/axi_bram_ctrl was set to start at 0x05_0000_0000 and be 1M large (with an end of 0x05_000F_FFFF)
+- hier_dac_play1/axi_bram_ctrl was set to start at 0x05_0100_0000 and be 1M large (with an end of 0x05_000F_FFFF)
