@@ -223,6 +223,12 @@ class mtsOverlay(Overlay):
         self.adc_dma.recvchannel.start()
         self.adc_dma.recvchannel.transfer(buffer)
         self.fifo_flush.on() # enable FIFO and samples will start flowing"""
+    def frequency_round(self,freq,sampleRate,dataLength=(2/4)*1024**2): #default datalength is 2MB
+        if self.stableFlag==1:
+            roundedFrequency=(sampleRate/self.dac_player.shape[0])*round(freq/(sampleRate/self.dac_player.shape[0]))
+        elif self.stableFlag==0:
+           roundedFrequency=(sampleRate/dataLength)*round(freq/(sampleRate/dataLength)) 
+        return roundedFrequency
 
 def resolve_binary_path(bitfile_name):
     """ this helper function is necessary to locate the bit file during overlay loading"""
@@ -232,8 +238,6 @@ def resolve_binary_path(bitfile_name):
         return os.path.join(MODULE_PATH, bitfile_name)
     else:
         raise FileNotFoundError(f'Cannot find {bitfile_name}.')
-def frequency_round(self,freq,sampleRate):
-    roundedFrequency=(sampleRate/self.dac_player.shape[0])*round(freq/(sampleRate/self.dac_player.shape[0]))
-    return roundedFrequency
+
 # -------------------------------------------------------------------------------------------------
 
