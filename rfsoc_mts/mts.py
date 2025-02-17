@@ -181,7 +181,7 @@ class mtsOverlay(Overlay):
         if (Xstatus != 1):
             raise Exception("The MTS ClockTree has failed to LOCK. Please verify board clocking configuration")
 
-    def trigger_capture(self):
+    def trigger_dac(self):
         """ Internal loopback of DAC waveform to internal capture mirror"""        
         if self.stableFlag==0:
             return "Cannot trigger capture in dev version"
@@ -232,5 +232,8 @@ def resolve_binary_path(bitfile_name):
         return os.path.join(MODULE_PATH, bitfile_name)
     else:
         raise FileNotFoundError(f'Cannot find {bitfile_name}.')
+def frequency_round(self,freq,sampleRate):
+    roundedFrequency=(sampleRate/self.dac_player.shape[0])*round(freq/(sampleRate/self.dac_player.shape[0]))
+    return roundedFrequency
 # -------------------------------------------------------------------------------------------------
 
