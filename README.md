@@ -3,15 +3,15 @@
 # RFSOC-PYNQ Arbitrary Waveform Generation Overlay
 This repository hosts an RFSoC overlay compatible with [PYNQ image v3.0.1](https://github.com/Xilinx/PYNQ/releases). This overlay demonstrates 8GS AWG capabilities by using two seperate DAC tiles with individual 1MB deep memory to allow for waveform shaping up to 8GHz. 
 
-<img src="./images/MTSbenefit.png" width="90%"/>
+<img src="./images/Cac1Waveform.png" width="90%"/>
 
 **PLEASE NOTE:** This overlay is a heavily modified version of the RFSoC-MTS overlay, with the MTS functionality stripped in favour of increasing the capability of the RFSoC to act as an AWG. As such there are some defunct blocks in the stable overlay (e.g. the deepCapture and DDR4 are not usable). Additionally some file naming still reflects MTS. **This overlay was made as part of an undergraduate student project and will likely not be maintained or updated in future! Multiple good practises are broken making it difficult to update or edit**
 
 
 The block diagram below shows an overview of the stable version of this overlay. A waveform is generated in PYNQ and formatted as a numpy array before being loaded into 1 of the 2 DAC tiles. 
-The <a href="./boards/ZCU208/notebooks/CommonBoardWiring.ipynb">loopback configuration</a> primary DAC is set up to optimise the power of the signal in the first Nyquist zone. The second DAC was set up to optimise the power of the aliased signal in the second Nyquist zone.  
+The primary DAC is set up to optimise the power of the signal in the first Nyquist zone. The second DAC was set up to optimise the power of the aliased signal in the second Nyquist zone.  
 
-<img src="./images/mtsOverlayBlockdiagram.png" width="60%"/>
+<img src="./images/awgOverlayBlock.png" width="60%"/>
 
 ## Board Support
 This design is available for the following boards:
@@ -60,9 +60,8 @@ The DDR4 testing notebook shows the indended use of the development overlay. It 
 To rebuild the provided bitstreams Vivado 2022.1 is required.
 
 ### Vivado
-**The below is currently inaccurate, instead of a tcl file the entire project file and assosiated compilation file is included**
 
-Two Vivado board projects are provided called "mts".  It is located under *boards/RFSoC4x2* directories as *build_mts*. A makefile is provided to build the overlays. Running *make all* will start the Vivado build and when finished the **bit** and **hwh** products will remain in the directory.  For example one may do the following:
+Two Vivado board projects are provided called "mtsStable" and "mtsDev.  It is located under *boards/RFSoC4x2* directories as *build_mts*. A makefile is provided to build the overlays. Running *make all* will start the Vivado build for the mtsStable overlay and when finished the **bit** and **hwh** products will remain in the directory.  For example one may do the following:
 ```sh
 cd /<repository-location>/boards/<board_name>/build_mts
 ```
@@ -73,9 +72,15 @@ make all
 #### Further Overlay Customization or Inspection
 For inspection or customization of the overlay, one may choose to start Vivado and without opening a project, issue the following via the tcl console:
 ```sh
-source mts.tcl
+source mtsStable.tcl
+```
+or for the development version
+```sh
+source mtsDev.tcl
 ```
 This will create the **mts** project for the chosen board and build the block diagram.  This allows the user to further customize the design as per their needs or just inspect within the GUI.  To continue the build process, additional tcl scripts can be run from the console such as: *build_bitstream.tcl* and *check_timing.tcl*, or the user may provide their own.
+
+Alternativly, you can simply use the build bitstream button in Vivado
 
 ## License 
 [MIT](./LICENSE)

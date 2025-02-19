@@ -13,7 +13,7 @@ board_files:
 	unzip bf.zip -d board_files && rm bf.zip
 
 block_design:
-	vivado -mode batch -source mts.tcl
+	vivado -mode batch -source mtsStable.tcl
 
 bitstream:
 	vivado -mode batch -source build_bitstream.tcl -notrace -tclargs mts
