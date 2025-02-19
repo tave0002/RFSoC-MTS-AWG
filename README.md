@@ -11,7 +11,7 @@ This repository hosts an RFSoC overlay compatible with [PYNQ image v3.0.1](https
 The block diagram below shows an overview of the stable version of this overlay. A waveform is generated in PYNQ and formatted as a numpy array before being loaded into 1 of the 2 DAC tiles. 
 The primary DAC is set up to optimise the power of the signal in the first Nyquist zone. The second DAC was set up to optimise the power of the aliased signal in the second Nyquist zone.  
 
-<img src="./images/awgOverlayBlock.png" width="60%"/>
+<img src="./images/awgOverlay.png" width="60%"/>
 
 ## Board Support
 This design is available for the following boards:
