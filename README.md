@@ -3,7 +3,7 @@
 # RFSOC-PYNQ Arbitrary Waveform Generation Overlay
 This repository hosts an RFSoC overlay compatible with [PYNQ image v3.0.1](https://github.com/Xilinx/PYNQ/releases). This overlay demonstrates 8GS AWG capabilities by using two seperate DAC tiles with individual 1MB deep memory to allow for waveform shaping up to 8GHz. 
 
-<img src="./images/Cac1Waveform.png" width="90%"/>
+<img src="./images/Dac1Waveform.png" width="90%"/>
 
 **PLEASE NOTE:** This overlay is a heavily modified version of the RFSoC-MTS overlay, with the MTS functionality stripped in favour of increasing the capability of the RFSoC to act as an AWG. As such there are some defunct blocks in the stable overlay (e.g. the deepCapture and DDR4 are not usable). Additionally some file naming still reflects MTS. **This overlay was made as part of an undergraduate student project and will likely not be maintained or updated in future! Multiple good practises are broken making it difficult to update or edit**
 
