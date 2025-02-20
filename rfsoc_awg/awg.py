@@ -15,7 +15,7 @@ MODULE_PATH = os.path.dirname(os.path.realpath(__file__))
 CLOCKWIZARD_LOCK_ADDRESS = 0x0004
 CLOCKWIZARD_RESET_ADDRESS = 0x0000
 CLOCKWIZARD_RESET_TOKEN = 0x000A
-MTS_START_TILE = 0x01
+MTS_START_TILE = 0x01 #not touching the naming since I don't want to stuff it up
 MAX_DAC_TILES = 4
 MAX_ADC_TILES = 4
 DAC_REF_TILE = 2
@@ -32,19 +32,16 @@ ZCU208_LMX_FREQ = 4000.0
 ZCU208_DAC_TILES = 0b0011
 ZCU208_ADC_TILES = 0b0011
 
-class mtsOverlay(Overlay):
+class awgOverlay(Overlay):
     """
-    The MTS overlay demonstrates the RFSoC multi-tile synchronization capability that enables
-    multiple RF DAC and ADC tiles to achieve latency alignment. This capability is key to enabling
-    Massive MIMO, phased array RADAR applications and beamforming.
+    The awg overlay demonstrates the RFSoC ability to act as an arbitrary waveform generator over large bandwidths.
     """
-    def __init__(self, bitfile_name='mts.bit',version="stable", **kwargs):
+    def __init__(self, bitfile_name='awgStable.bit',version="stable", **kwargs):
         """
-         This overlay class supports the MTS overlay.  It configures the PL gpio, internal memories,
-         PL-DRAM and DMA interfaces.  Additional helper methods are provided to: configure and verify
-         MTS, verify the DACRAM and read captured samples from the internal ADC
-         memories and the PL-DDR4 memory.  In addition to the bitfile_name, the active ADC and DAC
-         tiles must be provided to use in the MTS initialization.
+         This overlay class supports the AWG overlay.  It configures the PL gpio, internal memories,
+         PL-DRAM, and DAC players. Additional helper methods are provided to: configure and verify
+         AWG, round frequencies to fit in the internal memory. 
+         This can be used either to work with the stable or development version of the overlay
         """
         board = os.getenv('BOARD') 
         # Run lsmod command to get the loaded modules list
@@ -89,6 +86,7 @@ class mtsOverlay(Overlay):
         time.sleep(0.5)        
         super().__init__(resolve_binary_path(bitfile_name), **kwargs)
         self.xrfdc = self.usp_rf_data_converter_1       
+        #not touching the naming here since I think it'll stuff it up
         self.xrfdc.mts_dac_config.RefTile = DAC_REF_TILE  # DAC tile distributing reference clock
         self.xrfdc.mts_adc_config.RefTile = ADC_REF_TILE  # ADC                
 
@@ -124,7 +122,6 @@ class mtsOverlay(Overlay):
         return ipmmio.array[0:ipmmio.length].view(dtype)
 
     def sync_tiles(self, dacTarget=-1, adcTarget=-1):
-        """ Configures RFSoC MTS alignment"""
         # Set which RF tiles use MTS and turn MTS off
         return "NO ADCs in stable or dev version"
         """if self.stableFlag==0:

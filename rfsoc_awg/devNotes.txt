@@ -13,15 +13,23 @@ DDR4 module. It then sends the values it reads into the master side of a FIFO. T
 side of the FIFO all run at 300MHz. The output of the FIFO runs at 250MHz and goes to the width convertor, clock 
 convertor, and register slice used to up the sample rate going into the RFDC block. 
 
-The intention here is that due to burst limitation of AXI4, a continues data stream cannot be read from DDR4 (as
-bursts can only contain a maximum of 256 transfers in general, and 64 transfers in our spesific case due to 4KB
-memory guards and a bus width of 64 bytes).By connecting the DACRAMStreamer to a FIFO and running it faster then
-the FIFO is read, data is on average put in faster then it is taken out and so any breaks in the data transfer 
-caused by a new burst needing to be started are removed. Required values for clock speed can be calculated by
-dividing the number of words transfered in 1 burst (in our case, 64) by the number of clock cycles it takes to 
-transmit those words from when the read request is made (this accounts for read latancy). Multiplying this by 
-the clock frequency of the FIFO write side gives an "effective" clock frequency. Provided this is faster then the
-clock used to read from the FIFO, a continues and unbroken datastream will be achived on the output. 
+The reason for this implimentation relates to the nature of the communication protocol the DDR4 chip uses.
+To interface with the DDR4, Vivado uses a protocol called AXI-4. An extensive description of it can be found in 
+"Software Defined Radio with Zynq UltraScale+ RFSoC". For our purposes though, the important this is AXI4 doesn't 
+support continuas data streaming. Instead you make a read request to memory, wait some clock cycles and then get
+a response. You can request burst transfers, which gives the memory address you requested and the next 256 addresses
+of contigues clock cycles (although in our use case we are actually limited to 64 transfers due to 4KB memory guards in the DDR4, with a 
+bus width of 64 bytes we can do more then 64 transfers without violating this guard and invalidating the transfered).
+However this still leaves gaps throughout the waveform every time a new read request gets 
+made. Obviously this needs to be fixed if the DDR4 is going to be usable as a buffer for the DAC, hence the above approach.
+
+By connecting the DACRAMStreamer to a FIFO and running it faster then the FIFO is read, data is on average put
+in faster then it is taken out and so any breaks in the data transfer caused by a new burst needing to be
+started are removed. Required values for clock speed can be calculated by dividing the number of words transfered 
+in 1 burst (in our case, 64) by the number of clock cycles it takes to transmit those words from when the read 
+request is made (this accounts for read latancy). Multiplying this by the clock frequency of the FIFO write 
+side gives an "effective" clock frequency. Provided this is faster then the clock used to read from the FIFO,
+a continues and unbroken datastream will be achived on the output. 
 
 The DDR4 and DACRAMStreamer are additionally set up 
 such that if the FIFO is full, it will pause the data transfer until there is space.
@@ -35,7 +43,7 @@ folder as PDFs.
 ## Changes to the overall block diagram
 The internalRamInterconnect is completely removed and replaced with the blocks required to convert the data 
 widths between the UltraScale MPSoC + and the DDR4. Everything apart from the hier_dac_player and the 
-additional blocks required to make it output the desired waveform. 
+additional blocks required to make it output the desired waveform were deleted. 
 
 The FPD1 port was disabled as it was not being used. FPD0 was chosen as the active port as in the original MTS
 overlay that is the port the DDR4 was connected to. The clock that FPD0 runs on was connected to the AXI clock
@@ -53,7 +61,7 @@ The DACRAMStreamer has been modified to interface using AXI4 instead of the Bloc
 The DACRAMStreamer then connects directly to a AXI4-Stream FIFO to help smooth out the data transfer from the DDR4.
 The master (write side) of the FIFO is connected to the DDR4 clock running ~300MHz and the read size is connected
 to the clock wizards 250MHz clock. The FIFO then connects to a clock which steps the rate from 250MHz to 500MHz,
-which then does into a bus width converter that halfs the bus size, and into a register slice to smooth out data 
+which then goes into a bus width converter that halfs the bus size, and into a register slice to smooth out data 
 trasnfers. 
 
 ## Changes to the DACRAMStreamer
