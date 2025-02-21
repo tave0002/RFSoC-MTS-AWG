@@ -70,7 +70,7 @@ Once in that directory you may run 'make all' and it will build a bitream and ha
 make all
 ```
 #### Further Overlay Customization or Inspection
-For inspection or customization of the overlay, one may choose to start Vivado and without opening a project, issue the following via the tcl console (located at the bottom on the screen in Vivado):
+For inspection or customization of the overlay, one may choose to start Vivado and without opening a project, issue the following via the tcl console:
 ```sh
 source awgStable.tcl
 ```
