@@ -21,10 +21,10 @@ sudo apt-get update -y
 sudo apt-get install -y device-tree-compiler
 cd boards/$BOARD/dts
 make
-cp ddr4.dtbo ../../../rfsoc_awg/
+cp ddr4.dtbo ../../../rfsoc_mts/
 cd ../../..
 
 # Install python package and notebook
 python3 -m pip install . --no-build-isolation
-pynq-get-notebooks RFSoC-AWG -p $PYNQ_JUPYTER_NOTEBOOKS
+pynq-get-notebooks RFSoC-MTS -p $PYNQ_JUPYTER_NOTEBOOKS
 echo "$BOARD Ready..."

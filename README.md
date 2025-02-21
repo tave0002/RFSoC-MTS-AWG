@@ -70,13 +70,13 @@ Once in that directory you may run 'make all' and it will build a bitream and ha
 make all
 ```
 #### Further Overlay Customization or Inspection
-For inspection or customization of the overlay, one may choose to start Vivado and without opening a project, issue the following via the tcl console:
+For inspection or customization of the overlay, one may choose to start Vivado and without opening a project, issue the following via the tcl console (located at the bottom on the screen in Vivado):
 ```sh
-source awgStable.tcl
+source mtsStable.tcl
 ```
 or for the development version
 ```sh
-source awgDev.tcl
+source mtsDev.tcl
 ```
 This will create the **mts** project for the chosen board and build the block diagram.  This allows the user to further customize the design as per their needs or just inspect within the GUI.  To continue the build process, additional tcl scripts can be run from the console such as: *build_bitstream.tcl* and *check_timing.tcl*, or the user may provide their own.
 

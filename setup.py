@@ -9,7 +9,7 @@ from distutils.dir_util import copy_tree
 import os
 import shutil 
 
-module_name = "rfsoc_awg"
+module_name = "rfsoc_mts"
 board_name = os.environ['BOARD']
 
 data_files = []
@@ -64,7 +64,7 @@ extend_package(module_name, data_files)
 setup(
     name=module_name,
     version=find_version('{}/__init__.py'.format(module_name)),
-    description="RFSoC-PYNQ example design showcasing AWG capability of the SoC",
+    description="RFSoC-PYNQ example design showcasing MTS and PL-DDR4 deep capture",
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=find_packages(),
@@ -80,7 +80,7 @@ setup(
     ],
     entry_points={
         "pynq.notebooks": [
-            "RFSoC-AWG = {}.notebooks".format(
+            "RFSoC-MTS = {}.notebooks".format(
                 module_name)
         ]
     },
