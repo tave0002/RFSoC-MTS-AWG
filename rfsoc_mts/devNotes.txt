@@ -45,7 +45,7 @@ with inside the hier_dac_play.
 ## Changes to the hier_dac_play
 The internals of the hier_dac_play has been significantly redesigned to interface with the DDR4 module. The 
 axi_bram_ctrl and Block Memory Generator have been removed and replaced with the DDR4 block. A processor system
-reset block was added to support the DDR4. It should be notes that the design for this was largly copied from the 
+reset block was added to support the DDR4. It should be noted that the design for this was largly copied from the 
 original MTS overlay, and so there are potentially several issues with how this block has been connected.
 The DACRAMStreamer has been modified to interface using AXI4 instead of the Block Memory Generator interface
 (discussed more in later sections).
@@ -53,7 +53,7 @@ The DACRAMStreamer has been modified to interface using AXI4 instead of the Bloc
 The DACRAMStreamer then connects directly to a AXI4-Stream FIFO to help smooth out the data transfer from the DDR4.
 The master (write side) of the FIFO is connected to the DDR4 clock running ~300MHz and the read size is connected
 to the clock wizards 250MHz clock. The FIFO then connects to a clock which steps the rate from 250MHz to 500MHz,
-which then does into a bus width converter that halfs the bus size, and into a register slice to smooth out data 
+which then goes into a bus width converter that halfs the bus size, and into a register slice to smooth out data 
 trasnfers. 
 
 ## Changes to the DACRAMStreamer

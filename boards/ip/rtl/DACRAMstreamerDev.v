@@ -104,9 +104,10 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   wire [ADDR_WIDTH-1:0] baseAddress;
   assign baseAddress = 40'h1000000000; //hardcoded for now but will try to add a param for it another day
   wire [ADDR_WIDTH-1:0] ramAddressLimit;
+  M_AXI_DDR4_araddr = baseAddress; //initialise it at the starting address
   assign M_AXI_DDR4_wdata = 0;
-  assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8 -1;
-  assign M_AXI_DDR4_arburst = 2'b01;
+  assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8 -1; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
+  assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //burst length is 64 since it adds 1, not using full size since burst cannot overrun the 4KB memory guards 
   
 
@@ -118,7 +119,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   assign M_AXI_DDR4_arsize[1] = dWidthByte[2]|dWidthByte[3]|dWidthByte[6]|dWidthByte[7];
   assign M_AXI_DDR4_arsize[2] = dWidthByte[7];
 
-  always @(posedge axis_clk) begin
+  always @(posedge axis_clk) begin //done this way since the AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
 
     if (~axis_aresetn) begin
   	  axis_tvalid <= 0;
@@ -128,24 +129,18 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
       if(axis_tready) begin
         M_AXI_DDR4_rready <= 1'b1;
       end else begin
-        M_AXI_DDR4_rready <= 1'b0;
+        M_AXI_DDR4_rready <= 1'b0; //should check if having two non blocked assignments of the same value is a legal move
       end
 
       if (enable) begin
-      //This if statment checks if the ready flag has already been set from high to low, in which case the valid flag is set low so the memory address can be updated safely
-      if(M_AXI_DDR4_arready) begin
+      //For the below code, ensures that once a read starts, the "read address valid" signal goes low so the read address can be updated, turning it back on happens in the section of code that updates the actual address
+      if(M_AXI_DDR4_arready) begin 
         M_AXI_DDR4_arvalid <= 1'b0;
-      end else if (M_AXI_DDR4_rlast) begin
-        M_AXI_DDR4_arvalid <= 1'b1;
-      end
+      end 
 
-      if(M_AXI_DDR4_rvalid) begin //might want to put in "& M_AXI_DDR4_rready" but based on my understanding of how it all works this should be fine 
-        if(M_AXI_DDR4_rresp[1]) begin //the second bit in the 2 bit rresp indicates there has been an error so we check that one
-          axis_tvalid <= 1'b0;
-        end else begin
+      if(M_AXI_DDR4_rvalid & ~M_AXI_DDR4_rresp[1]) begin //might want to put in "& M_AXI_DDR4_rready" but based on my understanding of how it all works this should be fine. the rresp[1] checks if there has been an error
           axis_tdata <= M_AXI_DDR4_rdata;
           axis_tvalid <= 1'b1; //possible issue here with this perhaps missing the first data point
-        end
       end else begin
         axis_tvalid <= 1'b0;
       end
@@ -156,6 +151,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
         end else begin
           M_AXI_DDR4_araddr <= M_AXI_DDR4_araddr + M_AXI_DDR4_arlen*DWIDTH/8;
         end
+        M_AXI_DDR4_arvalid <= 1'b1; //although it is non blocking, this at least ensures they execute 
 		  end
   	end else begin
   	  axis_tvalid <= 0;
