@@ -4,47 +4,8 @@
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- --
 `timescale 1ns / 1ps
 
-module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131072, parameter ADDR_WIDTH = 32) ( //params here are defaults that can be edited in Vivado block design
-  (* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE_OUTSTANDING 0,NUM_READ_OUTSTANDING 1,READ_WRITE_MODE READ_ONLY,ADDR_WIDTH 32,DATA_WIDTH 512,HAS_BURST 1" *)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 AWADDR" *)
-  output [ADDR_WIDTH-1:0] M_AXI_DDR4_awaddr, // Write address (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 AWLEN" *)
-  output [7:0] M_AXI_DDR4_awlen, // Burst length (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 AWSIZE" *)
-  output [2:0] M_AXI_DDR4_awsize, // Burst size (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 AWBURST" *)
-  output [1:0] M_AXI_DDR4_awburst, // Burst type (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 AWREGION" *)
-  output [3:0] M_AXI_DDR4_awregion, // Write address slave region (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 AWVALID" *)
-  output M_AXI_DDR4_awvalid, // Write address valid (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 AWREADY" *)
-  input M_AXI_DDR4_awready, // Write address ready (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 WDATA" *)
-  output [DWIDTH-1:0] M_AXI_DDR4_wdata, // Write data (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 WVALID" *)
-  output M_AXI_DDR4_wvalid, // Write valid (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 WREADY" *)
-  input M_AXI_DDR4_wready, // Write ready (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 BRESP" *)
-  input [1:0] M_AXI_DDR4_bresp, // Write response (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 BVALID" *)
-  input M_AXI_DDR4_bvalid, // Write response valid (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 BREADY" *)
-  output M_AXI_DDR4_bready, // Write response ready (optional)
+module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131072, parameter ADDR_WIDTH = 40) ( //params here are defaults that can be edited in Vivado block design
+  (* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE_OUTSTANDING 0,NUM_READ_OUTSTANDING 1,READ_WRITE_MODE READ_ONLY,ADDR_WIDTH 40,DATA_WIDTH 512,HAS_BURST 1" *)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 ARADDR" *)
   output reg [ADDR_WIDTH-1:0] M_AXI_DDR4_araddr, // Read address (optional)
@@ -138,6 +99,15 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
         M_AXI_DDR4_arvalid <= 1'b0;
       end 
 
+      if(~M_AXI_DDR4_arvalid) begin //changed to trigger when valid is low so that it immidently updates, then sets valid back to high
+        if (M_AXI_DDR4_araddr >= ramAddressLimit) begin //NEED TO CHANGE ramAddressLimit and based on that can choose how to handle this
+		      M_AXI_DDR4_araddr <= baseAddress;
+        end else begin
+          M_AXI_DDR4_araddr <= M_AXI_DDR4_araddr + M_AXI_DDR4_arlen*DWIDTH/8;
+        end
+        M_AXI_DDR4_arvalid <= 1'b1; //want them to be non-blocked so the arvalid is high as soon as the new address is there
+		  end
+
       if(M_AXI_DDR4_rvalid & ~M_AXI_DDR4_rresp[1]) begin //might want to put in "& M_AXI_DDR4_rready" but based on my understanding of how it all works this should be fine. the rresp[1] checks if there has been an error
           axis_tdata <= M_AXI_DDR4_rdata;
           axis_tvalid <= 1'b1; //possible issue here with this perhaps missing the first data point
@@ -145,14 +115,6 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
         axis_tvalid <= 1'b0;
       end
 
-		  if(M_AXI_DDR4_rlast) begin
-        if (M_AXI_DDR4_araddr >= ramAddressLimit) begin //NEED TO CHANGE ramAddressLimit and based on that can choose how to handle this
-		      M_AXI_DDR4_araddr <= baseAddress;
-        end else begin
-          M_AXI_DDR4_araddr <= M_AXI_DDR4_araddr + M_AXI_DDR4_arlen*DWIDTH/8;
-        end
-        M_AXI_DDR4_arvalid <= 1'b1; //although it is non blocking, this at least ensures they execute 
-		  end
   	end else begin
   	  axis_tvalid <= 0;
       M_AXI_DDR4_araddr <= baseAddress;
