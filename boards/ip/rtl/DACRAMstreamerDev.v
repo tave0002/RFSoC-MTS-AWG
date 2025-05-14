@@ -92,7 +92,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
       end else begin
         M_AXI_DDR4_rready <= 1'b0; //should check if having two non blocked assignments of the same value is a legal move
       end
-
+      
       if (enable) begin
       //For the below code, ensures that once a read starts, the "read address valid" signal goes low so the read address can be updated, turning it back on happens in the section of code that updates the actual address
       if(M_AXI_DDR4_arready) begin 
@@ -108,7 +108,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
         M_AXI_DDR4_arvalid <= 1'b1; //want them to be non-blocked so the arvalid is high as soon as the new address is there
 		  end
 
-      if(M_AXI_DDR4_rvalid & ~M_AXI_DDR4_rresp[1]) begin //might want to put in "& M_AXI_DDR4_rready" but based on my understanding of how it all works this should be fine. the rresp[1] checks if there has been an error
+      if(M_AXI_DDR4_rvalid & ~M_AXI_DDR4_rresp[1] &M_AXI_DDR4_rready) begin // the rresp[1] checks if there has been an error
           axis_tdata <= M_AXI_DDR4_rdata;
           axis_tvalid <= 1'b1; //possible issue here with this perhaps missing the first data point
       end else begin
@@ -118,7 +118,8 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   	end else begin
   	  axis_tvalid <= 0;
       M_AXI_DDR4_araddr <= baseAddress;
-      M_AXI_DDR4_arvalid <= 1;
+      M_AXI_DDR4_arvalid <= 0;
+
   	end
   end
 end

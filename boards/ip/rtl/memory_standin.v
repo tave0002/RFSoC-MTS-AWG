@@ -66,9 +66,10 @@ module memory_standin((* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE
     reg rlast;
     reg rvalid;
     reg [7:0] burstCount; //when a valid signal comes in, set equal to arlen and then decriment on each clock transfer
-    reg [7:0] requestedBursts; //reference value for how many total bursts were requested
+    reg setupFlag; //used to determin if new data should be put on the data bus
     reg [2:0] burstSize;
-    reg [DATA_WIDTH-1:0] dummyData; //to be used as the data pulled from memory
+    reg [DATA_WIDTH-41:0] dummyData; //to be used as the data pulled from memory
+    integer randomSeed; //used to generate padding data
 
     assign S_AXI_mem_arready=arready;
     assign S_AXI_mem_rresp[1:0]=rresp[1:0];
@@ -83,6 +84,9 @@ module memory_standin((* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE
       rvalid=0;
       dataBus=0;
       memAddress=0;
+      dummyData=0; //ensure it initialises at 0
+      randomSeed=32;
+      setupFlag=0;
     end
 
     always @(posedge s_axi_aclk) begin
@@ -91,32 +95,56 @@ module memory_standin((* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE
         memAddress<=0;
         arready<=0;
         rvalid<=0;
+        burstCount<=0;
       end else begin
         if(burstCount== 8'b00000000) begin
-          arready=1'b1; //if the count is at 0, then 
-          if(S_AXI_mem_arvalid) begin
+          arready<=1'b1; //if the count is at 0, then 
+          setupFlag<=1'b1;
+          if(S_AXI_mem_arvalid & arready) begin
             memAddress<=S_AXI_mem_araddr;
             burstSize[2:0]<=S_AXI_mem_arsize[2:0];
             //check if we actually got the incrimental burst signal
-            if(S_AXI_mem_arburst == 2'b01) begin
+            if(S_AXI_mem_arburst == 2'b01) begin 
               burstCount<=S_AXI_mem_arlen+1; //the +1 is part of the read request axi protocol
-              requestedBursts<=S_AXI_mem_arlen+1;
-            end else begin
+            end else begin //TODO: Impliment fixed burst type 
               burstCount<=8'b00000001;
-              requestedBursts <= 8'b00000001;
             end
-            arready=0; //once the data is loaded in, set ready to receive new as 0
+            arready=0; //once the data is loaded in, set ready to receive new address as 0
           end
         end else begin
-          if(burstCount==requestedBursts) begin
-            //pad the top of data bus
+          if(setupFlag == 1) begin
+            //Creates padding data to be used, can't be assed generating more then this
+            dummyData[471:439]<=$random(randomSeed);
+            dummyData[438:406]<=$random(randomSeed+2);
+            dummyData[405:373]<=$random(randomSeed-3);
+            dummyData[372:340]<=$random(randomSeed*2);
+            dummyData[339:299]<=$random(randomSeed%3);
+            setupFlag<=0;
+
           end else begin
-            //incriment value on data bus by 1
+            //puts data on data bus
+            if(rvalid == 0) begin
+              dataBus[511:40]<=dummyData;
+              dataBus[39:0]<=memAddress;
+              memAddress<=memAddress+(2**burstSize); //memory address is in units of bytes, so increasing the memory address by 4 mobes 4 bytes over to the next int in memory
+              rvalid<=1'b1;
+            end else begin
+              if(S_AXI_mem_rready == 1) begin
+                dataBus[39:0]<=memAddress;
+                memAddress<=memAddress(2**burstSize);
+                burstCount<=burstCount-1;
+              end
+              if(burstCount == 2) begin //if on the clock edge there are two transfers to do, then the next transfer will be the last once, since on the same clock edge it will do the second last transfer
+                rlast<=1'b1;
+              end
+              if(rlast == 1) begin
+                rlast<=1'b0;
+                rvalid<=1'b0;
+              end
+            end
           end        
         end
       end
-
-
     end
 
 endmodule
