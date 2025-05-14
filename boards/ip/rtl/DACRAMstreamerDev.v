@@ -41,7 +41,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   input M_AXI_DDR4_rvalid, // Read valid (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 RREADY" *)
-  output reg M_AXI_DDR4_rready, // Read ready (optional)
+  output M_AXI_DDR4_rready, // Read ready (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 axis_clk CLK" *)
   (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF AXIS, ASSOCIATED_RESET axis_aresetn" *)
@@ -70,7 +70,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8 -1; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
   assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //burst length is 64 since it adds 1, not using full size since burst cannot overrun the 4KB memory guards 
-  
+  assign M_AXI_DDR4_rready=axis_tready; //This way the actual important signal is passed directly along so no clock edge delay
 
 
   //the below bit gives you log2 of the DWIDTH param (since it also is only powers of 2 in bytes which is how the arsize param has to be formatted
@@ -86,13 +86,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   	  axis_tvalid <= 0;
       M_AXI_DDR4_arvalid <= 0;
       M_AXI_DDR4_rready <= 0;
-  	end else begin
-      if(axis_tready) begin
-        M_AXI_DDR4_rready <= 1'b1;
-      end else begin
-        M_AXI_DDR4_rready <= 1'b0; //should check if having two non blocked assignments of the same value is a legal move
-      end
-      
+  	end else begin 
       if (enable) begin
       //For the below code, ensures that once a read starts, the "read address valid" signal goes low so the read address can be updated, turning it back on happens in the section of code that updates the actual address
       if(M_AXI_DDR4_arready) begin 
@@ -108,7 +102,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
         M_AXI_DDR4_arvalid <= 1'b1; //want them to be non-blocked so the arvalid is high as soon as the new address is there
 		  end
 
-      if(M_AXI_DDR4_rvalid & ~M_AXI_DDR4_rresp[1] &M_AXI_DDR4_rready) begin // the rresp[1] checks if there has been an error
+      if(M_AXI_DDR4_rvalid & ~M_AXI_DDR4_rresp[1] & M_AXI_DDR4_rready) begin // the rresp[1] checks if there has been an error
           axis_tdata <= M_AXI_DDR4_rdata;
           axis_tvalid <= 1'b1; //possible issue here with this perhaps missing the first data point
       end else begin
