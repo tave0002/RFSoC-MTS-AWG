@@ -45,8 +45,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 axis_clk CLK" *)
   (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF AXIS, ASSOCIATED_RESET axis_aresetn" *)
   input wire axis_clk,
-  (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 axis_aresetn RST" *)
-
+ 
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 m_axi_aclk CLK" *)
   (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF M_AXI_DDR4, ASSOCIATED_RESET axis_aresetn" *)
   input m_axi_clk, 
@@ -56,21 +55,18 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   output reg  [DWIDTH-1:0] axis_tdata,       // luckily rest of AXIS is inferred properly
   input  wire              axis_tready,
   output reg               axis_tvalid,
+  input enable 
   
-
-  // Control Input Parameters
-  input enable );
+  );
 
   wire [ADDR_WIDTH-1:0] baseAddress;
   assign baseAddress = 40'h1000000000; //hardcoded for now but will try to add a param for it another day
   wire [ADDR_WIDTH-1:0] ramAddressLimit;
-  M_AXI_DDR4_araddr = baseAddress; //initialise it at the starting address
-  assign M_AXI_DDR4_wdata = 0;
+  
   assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8 -1; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
   assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //burst length is 64 since it adds 1, not using full size since burst cannot overrun the 4KB memory guards 
-  assign M_AXI_DDR4_rready=axis_tready & enable; //This way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled
-
+  assign M_AXI_DDR4_rready=axis_tready & enable & axis_aresetn; //This way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled
 
   //the below bit gives you log2 of the DWIDTH param (since it also is only powers of 2 in bytes which is how the arsize param has to be formatted
   wire [8:0] dWidthByte;
@@ -79,12 +75,17 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   assign M_AXI_DDR4_arsize[1] = dWidthByte[2]|dWidthByte[3]|dWidthByte[6]|dWidthByte[7];
   assign M_AXI_DDR4_arsize[2] = dWidthByte[7];
 
-  always @(posedge axis_clk) begin //done this way since the AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
+  initial begin
+    M_AXI_DDR4_araddr = baseAddress; //initialise it at the starting address
+  end
+    
 
+  always @(posedge axis_clk) begin //done this way since the AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
     if (~axis_aresetn) begin
   	  axis_tvalid <= 0;
+  	  M_AXI_DDR4_araddr <= baseAddress;
       M_AXI_DDR4_arvalid <= 0;
-      M_AXI_DDR4_rready <= 0;
+      axis_tdata <= 0;
   	end else begin 
       if (enable) begin
       //For the below code, ensures that once a read starts, the "read address valid" signal goes low so the read address can be updated, turning it back on happens in the section of code that updates the actual address

@@ -13,7 +13,8 @@
         - Use Vivado to generate the actual IO ports and remove the ones we don't need
 */
 
-module memory_standin((* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE_OUTSTANDING 0,NUM_READ_OUTSTANDING 1,READ_WRITE_MODE WRITE_ONLY,ADDR_WIDTH 40, DATA_WIDTH 512,HAS_BURST 1" *)
+module memory_standin#( parameter DATA_WIDTH = 512, parameter ADDR_WIDTH = 40)(
+    (* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE_OUTSTANDING 0,NUM_READ_OUTSTANDING 1,READ_WRITE_MODE WRITE_ONLY,ADDR_WIDTH 40, DATA_WIDTH 512,HAS_BURST 1" *)
   //note, actuall address width od the ddr4 is 32 bits but there is an interconnect that drops the 40 down to 32 in the real design, to avoid complication I'm just making this 40 as well  
 
 
@@ -52,11 +53,10 @@ module memory_standin((* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE
 
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 s_axi_aclk CLK" *)
   (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF M_AXI_DDR4, ASSOCIATED_RESET s_axi_rstn" *)
-  input wire s_axi_aclk; //naming this way will let vivado infer this is a clock interface, see https://docs.amd.com/r/2022.2-English/ug1118-vivado-creating-packaging-custom-ip/Inferring-Clock-and-Reset-Interfaces
+  input wire s_axi_aclk, //naming this way will let vivado infer this is a clock interface, see https://docs.amd.com/r/2022.2-English/ug1118-vivado-creating-packaging-custom-ip/Inferring-Clock-and-Reset-Interfaces
   
   (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 s_axi_rstn RST" *)
-  input wire s_axi_rstn;
-
+  input wire s_axi_rstn
 );
    //These reg will drive the outputs, doing it this way means I can use shorter variables names in the actual operation
     reg [ADDR_WIDTH-1:0] memAddress;
@@ -131,7 +131,7 @@ module memory_standin((* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE
             end else begin
               if(S_AXI_mem_rready == 1) begin
                 dataBus[39:0]<=memAddress;
-                memAddress<=memAddress(2**burstSize);
+                memAddress<=memAddress+(2**burstSize);
                 burstCount<=burstCount-1;
               end
               if(burstCount == 2) begin //if on the clock edge there are two transfers to do, then the next transfer will be the last once, since on the same clock edge it will do the second last transfer

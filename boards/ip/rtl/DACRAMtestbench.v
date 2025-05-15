@@ -10,7 +10,6 @@ module dacram_testbench;
     wire arready;
     wire [511:0] rdata;
     wire [1:0] rresp;
-    wire rlast;
     wire rvalid;
     wire rready;
     wire rlast;
@@ -72,10 +71,10 @@ module dacram_testbench;
     //clock signal
     always begin
         #1.67 //will give a roughly "300MHz" clock, idk if this actually matters but I'm just gonna do it to be safe
-        clk=~clk
+        clk=~clk;
     end
 
-    always (@posedge clk) begin //makes it easier to keep track of times
+    always @(posedge clk) begin //makes it easier to keep track of times
         if(counter==10) begin
             aresetn<=1; //everything is left in reset and not enables for first 10 clock cycles
         end
@@ -105,16 +104,16 @@ module dacram_testbench;
         end
 
         if (counter==260) begin
-            aresetn<=0;
+            aresetn <= 0;
         end
 
-        if counter(==270) begin
-            aresetn<=1;
+        if (counter==270) begin
+            aresetn <= 1;
         end
 
         if (counter>350) begin
             aresetn<=0;
-            $finish
+            $finish;
         end
         counter=counter+1;
     end
