@@ -2,6 +2,8 @@
 // Copyright (C) 2023 Advanced Micro Devices, Inc
 // SPDX-License-Identifier: MIT
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- --
+//TODO: Sort out the whole enable issue once I know more about how the DDR4 works
+
 `timescale 1ns / 1ps
 
 module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131072, parameter ADDR_WIDTH = 40) ( //params here are defaults that can be edited in Vivado block design
@@ -18,9 +20,6 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 ARBURST" *)
   output [1:0] M_AXI_DDR4_arburst, // Burst type (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 ARREGION" *)
-  output [3:0] M_AXI_DDR4_arregion, // Read address slave region (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 ARVALID" *)
   output reg M_AXI_DDR4_arvalid, // Read address valid (optional)
@@ -70,7 +69,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8 -1; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
   assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //burst length is 64 since it adds 1, not using full size since burst cannot overrun the 4KB memory guards 
-  assign M_AXI_DDR4_rready=axis_tready; //This way the actual important signal is passed directly along so no clock edge delay
+  assign M_AXI_DDR4_rready=axis_tready & enable; //This way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled
 
 
   //the below bit gives you log2 of the DWIDTH param (since it also is only powers of 2 in bytes which is how the arsize param has to be formatted
@@ -89,7 +88,7 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
   	end else begin 
       if (enable) begin
       //For the below code, ensures that once a read starts, the "read address valid" signal goes low so the read address can be updated, turning it back on happens in the section of code that updates the actual address
-      if(M_AXI_DDR4_arready) begin 
+      if(M_AXI_DDR4_arready & M_AXI_DDR4_arvalid) begin 
         M_AXI_DDR4_arvalid <= 1'b0;
       end 
 
@@ -109,10 +108,13 @@ module DACRAMstreamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1310
         axis_tvalid <= 1'b0;
       end
 
-  	end else begin
+    end else if (M_AXI_DDR4_rvalid==1) begin
+
+    
+    end else begin
   	  axis_tvalid <= 0;
       M_AXI_DDR4_araddr <= baseAddress;
-      M_AXI_DDR4_arvalid <= 0;
+      M_AXI_DDR4_arvalid <= 1;
 
   	end
   end
