@@ -66,6 +66,8 @@ module dacram_testbench;
         enable=0;
         clk=0;
         aresetn=0; //start in reset state
+        counter=0;
+        errorCounter=0;
     end
 
     //clock signal
