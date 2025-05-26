@@ -42,7 +42,8 @@ module dacram_testbench;
         .axis_aresetn(aresetn),
         .axis_tready(tready),
         .axis_tvalid(tvalid),
-        .axis_tdata(tdata)
+        .axis_tdata(tdata),
+        .enable(enable)
     );  
 
     memory_standin tbmem(
@@ -67,12 +68,12 @@ module dacram_testbench;
         clk=0;
         aresetn=0; //start in reset state
         counter=0;
-        errorCounter=0;
+        errorCount=0;
     end
 
     //clock signal
     always begin
-        #1.67 //will give a roughly "300MHz" clock, idk if this actually matters but I'm just gonna do it to be safe
+        #1.67 //changed to 1 to see if an issue is occuring with simulation settings in vivado, should be 1.67 to simulate a 300MHz clock, idk if this actually matters but I'm just gonna do it to be safe
         clk=~clk;
     end
 
@@ -112,13 +113,20 @@ module dacram_testbench;
         if (counter==270) begin
             aresetn <= 1;
         end
-
-        if (counter>350) begin
+        
+        if (counter==300) begin
+            enable <= 0;
+        end
+         
+        if(counter==350) begin
+            enable <= 1;
+        end
+        
+        if (counter>390) begin
             aresetn<=0;
             $finish;
         end
         counter=counter+1;
     end
-
 
 endmodule

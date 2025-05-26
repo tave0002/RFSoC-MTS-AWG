@@ -40,7 +40,7 @@ module DACRAMstreamerDev #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1
   input M_AXI_DDR4_rvalid, // Read valid (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 RREADY" *)
-  output M_AXI_DDR4_rready, // Read ready (optional)
+  output wire M_AXI_DDR4_rready, // Read ready (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 axis_clk CLK" *)
   (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF AXIS, ASSOCIATED_RESET axis_aresetn" *)
@@ -55,8 +55,7 @@ module DACRAMstreamerDev #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1
   output reg  [DWIDTH-1:0] axis_tdata,       // luckily rest of AXIS is inferred properly
   input  wire              axis_tready,
   output reg               axis_tvalid,
-  input enable 
-  
+  input wire enable 
   );
 
   wire [ADDR_WIDTH-1:0] baseAddress;
@@ -66,7 +65,7 @@ module DACRAMstreamerDev #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1
   assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8 -1; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
   assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //burst length is 64 since it adds 1, not using full size since burst cannot overrun the 4KB memory guards 
-  assign M_AXI_DDR4_rready=axis_tready & enable & axis_aresetn; //This way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled
+  assign M_AXI_DDR4_rready=axis_tready & axis_aresetn; //This way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled
 
   //the below bit gives you log2 of the DWIDTH param (since it also is only powers of 2 in bytes which is how the arsize param has to be formatted
   wire [8:0] dWidthByte;
@@ -77,17 +76,20 @@ module DACRAMstreamerDev #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1
 
   initial begin
     M_AXI_DDR4_araddr = baseAddress; //initialise it at the starting address
+    M_AXI_DDR4_arvalid = 0;
+    axis_tdata=0;
+    axis_tvalid=0;
   end
     
 
   always @(posedge axis_clk) begin //done this way since the AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
     if (~axis_aresetn) begin
-  	  axis_tvalid <= 0;
   	  M_AXI_DDR4_araddr <= baseAddress;
       M_AXI_DDR4_arvalid <= 0;
       axis_tdata <= 0;
+      axis_tvalid<=0;
   	end else begin 
-      if (enable) begin
+      if (enable | (M_AXI_DDR4_rready & M_AXI_DDR4_rvalid)) begin //ensures if enable is turned off then the transaction finishes
       //For the below code, ensures that once a read starts, the "read address valid" signal goes low so the read address can be updated, turning it back on happens in the section of code that updates the actual address
       if(M_AXI_DDR4_arready & M_AXI_DDR4_arvalid) begin 
         M_AXI_DDR4_arvalid <= 1'b0;
@@ -102,21 +104,25 @@ module DACRAMstreamerDev #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1
         M_AXI_DDR4_arvalid <= 1'b1; //want them to be non-blocked so the arvalid is high as soon as the new address is there
 		  end
 
-      if(M_AXI_DDR4_rvalid & ~M_AXI_DDR4_rresp[1] & M_AXI_DDR4_rready) begin // the rresp[1] checks if there has been an error
-          axis_tdata <= M_AXI_DDR4_rdata;
-          axis_tvalid <= 1'b1; //possible issue here with this perhaps missing the first data point
+  
+      if(M_AXI_DDR4_rready & M_AXI_DDR4_rvalid) begin //&tready technically redundant since the rready already handles this but still good practise
+        axis_tdata <= M_AXI_DDR4_rdata;
+        axis_tvalid<=1;
       end else begin
-        axis_tvalid <= 1'b0;
+        axis_tvalid<=0;
       end
-
-    end else if (M_AXI_DDR4_rvalid==1) begin
+      
+      if(~enable) begin //if enable is off but transaction is still in progress, get ready by setting arvalid low
+        M_AXI_DDR4_araddr <= baseAddress;
+        M_AXI_DDR4_arvalid <=0;
+      end
 
     
     end else begin
-  	  axis_tvalid <= 0;
-      M_AXI_DDR4_araddr <= baseAddress;
-      M_AXI_DDR4_arvalid <= 1;
-
+        M_AXI_DDR4_araddr <= baseAddress;
+        M_AXI_DDR4_arvalid <= 0;
+        axis_tvalid<=0;
+        axis_tdata<=0;
   	end
   end
 end

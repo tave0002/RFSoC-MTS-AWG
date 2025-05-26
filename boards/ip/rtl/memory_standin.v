@@ -75,6 +75,7 @@ module memory_standin#( parameter DATA_WIDTH = 512, parameter ADDR_WIDTH = 40)(
     assign S_AXI_mem_rresp[1:0]=rresp[1:0];
     assign S_AXI_mem_rlast=rlast; 
     assign S_AXI_mem_rvalid=rvalid;
+    assign S_AXI_mem_rdata=dataBus;
 
     initial begin
       burstCount=0;
@@ -98,6 +99,8 @@ module memory_standin#( parameter DATA_WIDTH = 512, parameter ADDR_WIDTH = 40)(
         burstCount<=0;
       end else begin
         if(burstCount== 8'b00000000) begin
+          rlast<=0;
+          rvalid<=0;
           arready<=1'b1; //if the count is at 0, then 
           setupFlag<=1'b1;
           if(S_AXI_mem_arvalid & arready) begin
@@ -109,7 +112,7 @@ module memory_standin#( parameter DATA_WIDTH = 512, parameter ADDR_WIDTH = 40)(
             end else begin //TODO: Impliment fixed burst type 
               burstCount<=8'b00000001;
             end
-            arready=0; //once the data is loaded in, set ready to receive new address as 0
+            arready<=0; //once the data is loaded in, set ready to receive new address as 0
           end
         end else begin
           if(setupFlag == 1) begin
@@ -120,26 +123,24 @@ module memory_standin#( parameter DATA_WIDTH = 512, parameter ADDR_WIDTH = 40)(
             dummyData[372:340]<=$random(randomSeed*2);
             dummyData[339:299]<=$random(randomSeed%3);
             setupFlag<=0;
+            
 
           end else begin
             //puts data on data bus
             if(rvalid == 0) begin
-              dataBus[511:40]<=dummyData;
-              dataBus[39:0]<=memAddress;
+              dataBus[511:8]<=504'b0;
+              dataBus[7:0]<=burstCount; //makes it easy to see the progrssion of different data values
               memAddress<=memAddress+(2**burstSize); //memory address is in units of bytes, so increasing the memory address by 4 mobes 4 bytes over to the next int in memory
+              burstCount<=burstCount-1;
               rvalid<=1'b1;
             end else begin
               if(S_AXI_mem_rready == 1) begin
-                dataBus[39:0]<=memAddress;
+                dataBus[7:0]<=burstCount; //makes it easy to see the progrssion of different data values
                 memAddress<=memAddress+(2**burstSize);
                 burstCount<=burstCount-1;
               end
-              if(burstCount == 2) begin //if on the clock edge there are two transfers to do, then the next transfer will be the last once, since on the same clock edge it will do the second last transfer
+              if(burstCount == 1) begin
                 rlast<=1'b1;
-              end
-              if(rlast == 1) begin
-                rlast<=1'b0;
-                rvalid<=1'b0;
               end
             end
           end        
