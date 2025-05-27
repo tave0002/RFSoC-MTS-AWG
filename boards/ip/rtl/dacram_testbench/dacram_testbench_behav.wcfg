@@ -11,13 +11,13 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="1,270.081 ns"></ZoomStartTime>
-      <ZoomEndTime time="1,307.832 ns"></ZoomEndTime>
-      <Cursor1Time time="1,279.031 ns"></Cursor1Time>
+      <ZoomStartTime time="1,213.579 ns"></ZoomStartTime>
+      <ZoomEndTime time="1,308.987 ns"></ZoomEndTime>
+      <Cursor1Time time="18.657 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="168"></NameColumnWidth>
-      <ValueColumnWidth column_width="108"></ValueColumnWidth>
+      <ValueColumnWidth column_width="100"></ValueColumnWidth>
    </column_width_setting>
    <WVObjectSize size="19" />
    <wvobject fp_name="/dacram_testbench/araddr" type="array">
@@ -93,6 +93,7 @@
    <wvobject fp_name="/dacram_testbench/counter" type="array">
       <obj_property name="ElementShortName">counter[31:0]</obj_property>
       <obj_property name="ObjectShortName">counter[31:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject fp_name="/dacram_testbench/errorCount" type="array">
       <obj_property name="ElementShortName">errorCount[31:0]</obj_property>

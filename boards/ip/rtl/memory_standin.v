@@ -112,7 +112,7 @@ module memory_standin#( parameter DATA_WIDTH = 512, parameter ADDR_WIDTH = 40)(
             end else begin //TODO: Impliment fixed burst type 
               burstCount<=8'b00000001;
             end
-            arready<=0; //once the data is loaded in, set ready to receive new address as 0
+            //arready<=0; //once the data is loaded in, set ready to receive new address as 0
           end
         end else begin
           if(setupFlag == 1) begin
