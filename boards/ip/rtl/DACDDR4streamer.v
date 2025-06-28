@@ -71,10 +71,10 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131
   wire [ADDR_WIDTH-1:0] baseAddress;
   wire [ADDR_WIDTH-1:0] ramAddressLimit;
   assign baseAddress = START_ADDR; 
-  assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8 -1; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
+  assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
   assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //Not using max possible burst size since this would overrun the 4KB memory guards 
-  assign M_AXI_DDR4_rready=axis_tready & axis_aresetn; //WARNING: this breaks AXI4 protocol since this results in the output being combinationally dependent on the input. This way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled
+  assign M_AXI_DDR4_rready=axis_tready & axis_aresetn; //WARNING: this breaks AXI4 protocol since this results in the output being combinationally dependent on the input. However for now I will leave it since this way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled. Once I've done a timing analysis this may change, if I have to change it, will need to make use of the almost full flag on the FIFO and feed that into the dacramstreamer
 
   //burst legth parameters
   wire [8:0] dWidthByte;
