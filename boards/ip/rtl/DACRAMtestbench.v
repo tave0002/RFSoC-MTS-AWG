@@ -73,7 +73,7 @@ module dacram_testbench;
 
     //clock signal
     always begin
-        #1.67 //changed to 1 to see if an issue is occuring with simulation settings in vivado, should be 1.67 to simulate a 300MHz clock, idk if this actually matters but I'm just gonna do it to be safe
+        #1.67 //300MHz clock, idk if this actually matters but I'm just gonna do it to be safe
         clk=~clk;
     end
 
