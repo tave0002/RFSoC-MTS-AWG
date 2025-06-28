@@ -2,7 +2,7 @@
 2020.2
 Apr 18 2022
 16:05:34
-F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/DACRAMstreamerDev.v,1748310122,verilog,,F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/memory_standin.v,,DACRAMstreamerDev,,,,,,,,
-F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/DACRAMtestbench.v,1748234540,verilog,,F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/DACRAMstreamerDev.v,,dacram_testbench,,,,,,,,
+F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/DACDDR4streamer.v,1751080422,verilog,,F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/DACRAMtestbench.v,,DACDDR4streamer,,,,,,,,
+F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/DACRAMtestbench.v,1751080357,verilog,,F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/memory_standin.v,,dacram_testbench,,,,,,,,
 F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/dacram_testbench/dacram_testbench.sim/sim_1/behav/xsim/glbl.v,1649976174,verilog,,,,glbl,,,,,,,,
 F:/Tom/Work/RFSoC-MTS-AWG/boards/ip/rtl/memory_standin.v,1748234988,verilog,,,,memory_standin,,,,,,,,

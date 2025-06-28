@@ -1,7 +1,7 @@
 # compile verilog/system verilog design source files
 verilog xil_defaultlib  \
+"../../../../../DACDDR4streamer.v" \
 "../../../../../DACRAMtestbench.v" \
-"../../../../../DACRAMstreamerDev.v" \
 "../../../../../memory_standin.v" \
 
 # compile glbl module

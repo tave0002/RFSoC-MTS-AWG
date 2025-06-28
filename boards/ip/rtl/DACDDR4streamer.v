@@ -13,7 +13,7 @@
 
 `timescale 1ns / 1ps
 
-module DACRAMstreamerDev #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131072, parameter ADDR_WIDTH = 40, parameter START_ADDR = 40'h1000000000) ( //params here are defaults that can be edited in Vivado block design
+module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131072, parameter ADDR_WIDTH = 40, parameter START_ADDR = 40'h1000000000) ( //params here are defaults that can be edited in Vivado block design
   (* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE_OUTSTANDING 0,NUM_READ_OUTSTANDING 1,READ_WRITE_MODE READ_ONLY,ADDR_WIDTH 40,DATA_WIDTH 512,HAS_BURST 1" *)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 ARADDR" *)
@@ -74,7 +74,7 @@ module DACRAMstreamerDev #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 1
   assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8 -1; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
   assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //Not using max possible burst size since this would overrun the 4KB memory guards 
-  assign M_AXI_DDR4_rready=axis_tready & axis_aresetn; //This way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled
+  assign M_AXI_DDR4_rready=axis_tready & axis_aresetn; //WARNING: this breaks AXI4 protocol since this results in the output being combinationally dependent on the input. This way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled
 
   //burst legth parameters
   wire [8:0] dWidthByte;

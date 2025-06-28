@@ -25,7 +25,7 @@ module dacram_testbench;
     integer counter;
     integer errorCount;
     
-    DACRAMstreamerDev tbstreamer(
+    DACDDR4streamer tbstreamer(
         .M_AXI_DDR4_araddr(araddr),
         .M_AXI_DDR4_arlen(arlen),
         .M_AXI_DDR4_arsize(arsize),
