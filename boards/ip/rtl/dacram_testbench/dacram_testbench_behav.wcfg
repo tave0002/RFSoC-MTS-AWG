@@ -11,13 +11,13 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="1,213.579 ns"></ZoomStartTime>
-      <ZoomEndTime time="1,308.987 ns"></ZoomEndTime>
-      <Cursor1Time time="18.657 ns"></Cursor1Time>
+      <ZoomStartTime time="100.607 ns"></ZoomStartTime>
+      <ZoomEndTime time="121.268 ns"></ZoomEndTime>
+      <Cursor1Time time="101.870 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="168"></NameColumnWidth>
-      <ValueColumnWidth column_width="100"></ValueColumnWidth>
+      <ValueColumnWidth column_width="96"></ValueColumnWidth>
    </column_width_setting>
    <WVObjectSize size="19" />
    <wvobject fp_name="/dacram_testbench/araddr" type="array">
@@ -44,6 +44,14 @@
       <obj_property name="ElementShortName">arready</obj_property>
       <obj_property name="ObjectShortName">arready</obj_property>
    </wvobject>
+   <wvobject fp_name="/dacram_testbench/rvalid" type="logic">
+      <obj_property name="ElementShortName">rvalid</obj_property>
+      <obj_property name="ObjectShortName">rvalid</obj_property>
+   </wvobject>
+   <wvobject fp_name="/dacram_testbench/rready" type="logic">
+      <obj_property name="ElementShortName">rready</obj_property>
+      <obj_property name="ObjectShortName">rready</obj_property>
+   </wvobject>
    <wvobject fp_name="/dacram_testbench/rdata" type="array">
       <obj_property name="ElementShortName">rdata[511:0]</obj_property>
       <obj_property name="ObjectShortName">rdata[511:0]</obj_property>
@@ -52,14 +60,6 @@
    <wvobject fp_name="/dacram_testbench/rresp" type="array">
       <obj_property name="ElementShortName">rresp[1:0]</obj_property>
       <obj_property name="ObjectShortName">rresp[1:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/dacram_testbench/rvalid" type="logic">
-      <obj_property name="ElementShortName">rvalid</obj_property>
-      <obj_property name="ObjectShortName">rvalid</obj_property>
-   </wvobject>
-   <wvobject fp_name="/dacram_testbench/rready" type="logic">
-      <obj_property name="ElementShortName">rready</obj_property>
-      <obj_property name="ObjectShortName">rready</obj_property>
    </wvobject>
    <wvobject fp_name="/dacram_testbench/rlast" type="logic">
       <obj_property name="ElementShortName">rlast</obj_property>
@@ -82,13 +82,13 @@
       <obj_property name="ElementShortName">enable</obj_property>
       <obj_property name="ObjectShortName">enable</obj_property>
    </wvobject>
-   <wvobject fp_name="/dacram_testbench/clk" type="logic">
-      <obj_property name="ElementShortName">clk</obj_property>
-      <obj_property name="ObjectShortName">clk</obj_property>
-   </wvobject>
    <wvobject fp_name="/dacram_testbench/aresetn" type="logic">
       <obj_property name="ElementShortName">aresetn</obj_property>
       <obj_property name="ObjectShortName">aresetn</obj_property>
+   </wvobject>
+   <wvobject fp_name="/dacram_testbench/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
    </wvobject>
    <wvobject fp_name="/dacram_testbench/counter" type="array">
       <obj_property name="ElementShortName">counter[31:0]</obj_property>

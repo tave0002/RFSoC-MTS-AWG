@@ -9,11 +9,12 @@
 
 //Purpose: The original DACRAMStreamer was a custom RTL IP made for the MTS overlay where it streamed data from a block of BRAM into the RFDC IP block to generate waveforms
 //  this modified version performs a similar task but for the DDR4 SDRAM (MIG) Controller IP, with the aim of achiving the same streaming rate but with a much deeper memory.
-//  THis uses the AXI-4 protocol to request data from the DDR4 and places said data on the axis data bus
+//  This uses the AXI-4 protocol to request data from the DDR4 and places said data on the axis data bus.
+//  Please note in accordance with Vivados address managment system kilo, mega, and gigabytes are 1024, 1024^2, 1024^3 bytes respectivly
 
 `timescale 1ns / 1ps
 
-module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131072, parameter ADDR_WIDTH = 40, parameter START_ADDR = 40'h1000000000) ( //params here are defaults that can be edited in Vivado block design
+module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 256/*done in kByte since params are 32 bit and num bytes in 4Gb is a 33 bit int*/, parameter ADDR_WIDTH = 40, parameter START_ADDR = 40'h1000000000) ( //params here are defaults that can be edited in Vivado block design
   (* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE_OUTSTANDING 0,NUM_READ_OUTSTANDING 1,READ_WRITE_MODE READ_ONLY,ADDR_WIDTH 40,DATA_WIDTH 512,HAS_BURST 1" *)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 ARADDR" *)
@@ -37,7 +38,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 RDATA" *)
   input [DWIDTH-1:0] M_AXI_DDR4_rdata, // Read data (optional)
   
-  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 RRESP" *)
+  (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 RRESP" *) //at some point this should be used to check if the read was actually sucsessful
   input [1:0] M_AXI_DDR4_rresp, // Read response (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 RLAST" *)
@@ -47,7 +48,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131
   input M_AXI_DDR4_rvalid, // Read valid (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 RREADY" *)
-  output wire M_AXI_DDR4_rready, // Read ready (optional)
+  output reg M_AXI_DDR4_rready, // Read ready (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 axis_clk CLK" *)
   (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF AXIS, ASSOCIATED_RESET axis_aresetn" *)
@@ -64,24 +65,26 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131
   input  wire              axis_tready,
   output reg               axis_tvalid,
   
-  input wire enable //a user controlled input that allows the user to suspend the data transaction and update the memory 
+  input wire enable, //a user controlled input that allows the user to suspend the data transaction and update the memory 
+  input wire fifo_almost_full
   );
 
   //memory parameters
   wire [ADDR_WIDTH-1:0] baseAddress;
   wire [ADDR_WIDTH-1:0] ramAddressLimit;
   assign baseAddress = START_ADDR; 
-  assign ramAddressLimit = baseAddress + MEM_SIZE_BYTES - M_AXI_DDR4_arlen*DWIDTH/8; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
+  assign ramAddressLimit = baseAddress + (MEM_SIZE_kBYTES*1024) - (M_AXI_DDR4_arlen+1)*DWIDTH/8; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
   assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //Not using max possible burst size since this would overrun the 4KB memory guards 
-  assign M_AXI_DDR4_rready=axis_tready & axis_aresetn; //WARNING: this breaks AXI4 protocol since this results in the output being combinationally dependent on the input. However for now I will leave it since this way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled. Once I've done a timing analysis this may change, if I have to change it, will need to make use of the almost full flag on the FIFO and feed that into the dacramstreamer
+   //WARNING: this breaks AXI4 protocol since this results in the output being combinationally dependent on the input. However for now I will leave it since this way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled. Once I've done a timing analysis this may change, if I have to change it, will need to make use of the almost full flag on the FIFO and feed that into the dacramstreamer
 
   //burst legth parameters
   wire [8:0] dWidthByte;
   assign dWidthByte=DWIDTH/8; //data width in bytes
+  //below should be laking log2(dWidthByte), note the below commands only work because the input value will only every be a power of 2
   assign M_AXI_DDR4_arsize[0] = dWidthByte[1]|dWidthByte[3]|dWidthByte[5]|dWidthByte[7];  //Sets the data transfer width to 512 bits, this line and below gives you log2 of the DWIDTH param (since it also is only powers of 2 in bytes which is how the arsize param has to be formatted 
   assign M_AXI_DDR4_arsize[1] = dWidthByte[2]|dWidthByte[3]|dWidthByte[6]|dWidthByte[7];
-  assign M_AXI_DDR4_arsize[2] = dWidthByte[7];
+  assign M_AXI_DDR4_arsize[2] = dWidthByte[4]|dWidthByte[5]|dWidthByte[6]|dWidthByte[7];
 
   //misc parameters
   reg startFlag; //used to set arvalid again once reset or ~enable is deasserted
@@ -103,8 +106,10 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131
       axis_tdata <= 0;
       axis_tvalid<=0;
       startFlag <= 1;
+      M_AXI_DDR4_rready <= 0;
   	end else begin 
       if (enable | (M_AXI_DDR4_rready & M_AXI_DDR4_rvalid)) begin //ensures if enable is turned off then the transaction finishes
+        M_AXI_DDR4_rready <= axis_tready & (~fifo_almost_full); //determin if it is ready to read a value by confirming that the FIFO isn't almost full and that it is actually ready to receive values 
         
         //set arvalid high to begin the transactions
         if (startFlag & enable) begin
@@ -122,7 +127,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131
           if (M_AXI_DDR4_araddr >= ramAddressLimit) begin //functionality of this not yet tested, should set the ramAddressLimit low for a testbench and test the wrap around works as intended
 		        M_AXI_DDR4_araddr <= baseAddress;
           end else begin
-            M_AXI_DDR4_araddr <= M_AXI_DDR4_araddr + M_AXI_DDR4_arlen*DWIDTH/8;
+            M_AXI_DDR4_araddr <= M_AXI_DDR4_araddr + (M_AXI_DDR4_arlen+1)*dWidthByte;
           end
           M_AXI_DDR4_arvalid <= 1'b1; 
 		    end
@@ -148,6 +153,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_BYTES = 131
         axis_tvalid<=0;
         axis_tdata<=0;
         startFlag <= 1;
+        M_AXI_DDR4_rready <= 0;
   	  end
   end
 end
