@@ -40,7 +40,7 @@ Once installation has finished you will find a *RFSoC-MTS-AWG* folder in the Jup
 Open the **rfsocMTS** notebook within the boards/RFSoC4x2 folder and begin running each cell in order.  If after attempting to load the overlay an AssertionError is thrown reporting, "Could not restart zocl. Please restart Shutdown All Kernels and restart" as shown in the figure below. 
 
 <p align="center">
-  <img src="./images/assertError_ZOCL.png" width="70%" />
+  <img src="./images/assertError_ZOCL.png"  />
 </p>
 
 You may have other notebooks currently open.  Because this design uses a device tree overlay to access PL-DRAM, you will need to shutdown all other kernels before starting this one.  To do this, click on the Kernel menu and then choose "Shut Down All Kernels" as shown in the figure.
