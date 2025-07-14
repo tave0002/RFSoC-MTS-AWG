@@ -24,7 +24,7 @@ Follow the instructions below to install the "mts-awg" overlay. **You will need 
 * Navigate to Jupyter Labs by opening a browser and connecting to `http://<board_ip_address>:9090/lab`.
 * Open a terminal in Jupyter as illustrated below:
 <p align="center">
-  <img src="./images/open_terminal_window.jpg" width="50%" height="50%" />
+  <img src="./images/open_terminal_window.jpg" />
 </p>
 
 Run the code below in the Jupyter terminal to install the RFSoC-MTS-AWG project files.
