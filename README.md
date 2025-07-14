@@ -24,7 +24,7 @@ Follow the instructions below to install the "mts-awg" overlay. **You will need 
 * Navigate to Jupyter Labs by opening a browser and connecting to `http://<board_ip_address>:9090/lab`.
 * Open a terminal in Jupyter as illustrated below:
 <p align="center">
-  <img src="./images/open_terminal_window.jpg" width="50%" height="50%" />
+  <img src="./images/open_terminal_window.jpg" />
 </p>
 
 Run the code below in the Jupyter terminal to install the RFSoC-MTS-AWG project files.
@@ -40,13 +40,13 @@ Once installation has finished you will find a *RFSoC-MTS-AWG* folder in the Jup
 Open the **rfsocMTS** notebook within the boards/RFSoC4x2 folder and begin running each cell in order.  If after attempting to load the overlay an AssertionError is thrown reporting, "Could not restart zocl. Please restart Shutdown All Kernels and restart" as shown in the figure below. 
 
 <p align="center">
-  <img src="./images/assertError_ZOCL.png" width="70%" />
+  <img src="./images/assertError_ZOCL.png"  />
 </p>
 
 You may have other notebooks currently open.  Because this design uses a device tree overlay to access PL-DRAM, you will need to shutdown all other kernels before starting this one.  To do this, click on the Kernel menu and then choose "Shut Down All Kernels" as shown in the figure.
 
 <p align="center">
-  <img src="./images/assertError_shutdown_all_kernels.png" width="50%" height="50%" />
+  <img src="./images/assertError_shutdown_all_kernels.png" />
 </p>
 
 The notebook loads a DAC memory with a user definable waveform.  A frequency comb is used in this example and broadcast out of DAC_A. Users can edit the cell by uncommenting lines to additionally play the waveform from DAC_B, which will optimise the power in the second nyquist zone. 
