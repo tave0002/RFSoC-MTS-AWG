@@ -1,11 +1,11 @@
-//IP Name: DACRAMStreamer
+//IP Name: DACDDR$streamer
 //Original Authors:
   // -------------------------------------------------------------------------------------------------
   // Copyright (C) 2023 Advanced Micro Devices, Inc
   // SPDX-License-Identifier: MIT
   // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- --
 //Modifications made by: Tom Avent
-//Last Modified: 27/05/2025
+//Last Modified: 14/07/2025
 
 //Purpose: The original DACRAMStreamer was a custom RTL IP made for the MTS overlay where it streamed data from a block of BRAM into the RFDC IP block to generate waveforms
 //  this modified version performs a similar task but for the DDR4 SDRAM (MIG) Controller IP, with the aim of achiving the same streaming rate but with a much deeper memory.
@@ -14,7 +14,7 @@
 
 `timescale 1ns / 1ps
 
-module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 256/*done in kByte since params are 32 bit and num bytes in 4Gb is a 33 bit int*/, parameter ADDR_WIDTH = 40, parameter START_ADDR = 40'h1000000000) ( //params here are defaults that can be edited in Vivado block design
+module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 524288, parameter ADDR_WIDTH = 40, parameter START_ADDR = 40'h1000000000) ( //params here are defaults that can be edited in Vivado block design
   (* X_INTERFACE_PARAMETER = "MAX_BURST_LENGTH 256,NUM_WRITE_OUTSTANDING 0,NUM_READ_OUTSTANDING 1,READ_WRITE_MODE READ_ONLY,ADDR_WIDTH 40,DATA_WIDTH 512,HAS_BURST 1" *)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 ARADDR" *)
@@ -73,7 +73,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 25
   wire [ADDR_WIDTH-1:0] baseAddress;
   wire [ADDR_WIDTH-1:0] ramAddressLimit;
   assign baseAddress = START_ADDR; 
-  assign ramAddressLimit = baseAddress + (MEM_SIZE_kBYTES*1024) - (M_AXI_DDR4_arlen+1)*DWIDTH/8; //want the limit to be the final memory address read before wrap around, not the actual last element in memory
+  assign ramAddressLimit = baseAddress + (MEM_SIZE_kBYTES*1024) - (M_AXI_DDR4_arlen+1)*(DWIDTH/8); //want the limit to be the final memory address read before wrap around, not the actual last element in memory
   assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
   assign M_AXI_DDR4_arlen = 8'd63; //Not using max possible burst size since this would overrun the 4KB memory guards 
    //WARNING: this breaks AXI4 protocol since this results in the output being combinationally dependent on the input. However for now I will leave it since this way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled. Once I've done a timing analysis this may change, if I have to change it, will need to make use of the almost full flag on the FIFO and feed that into the dacramstreamer
