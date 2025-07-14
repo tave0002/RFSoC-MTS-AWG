@@ -46,7 +46,7 @@ Open the **rfsocMTS** notebook within the boards/RFSoC4x2 folder and begin runni
 You may have other notebooks currently open.  Because this design uses a device tree overlay to access PL-DRAM, you will need to shutdown all other kernels before starting this one.  To do this, click on the Kernel menu and then choose "Shut Down All Kernels" as shown in the figure.
 
 <p align="center">
-  <img src="./images/assertError_shutdown_all_kernels.png" width="50%" height="50%" />
+  <img src="./images/assertError_shutdown_all_kernels.png" />
 </p>
 
 The notebook loads a DAC memory with a user definable waveform.  A frequency comb is used in this example and broadcast out of DAC_A. Users can edit the cell by uncommenting lines to additionally play the waveform from DAC_B, which will optimise the power in the second nyquist zone. 
