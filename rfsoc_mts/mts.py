@@ -54,7 +54,7 @@ class mtsOverlay(Overlay):
         if version=="stable":
             self.stableFlag=1
         elif version=="dev":
-            self.stableFlag==0
+            self.stableFlag=0
         else:
             assert False, "version spesified isn't an option. Please use 'stable' for functional version or 'dev' for DDR4 testing"
         print(f"Stable flag is set as {self.stableFlag}")
@@ -99,7 +99,6 @@ class mtsOverlay(Overlay):
         
         if self.stableFlag==1:
             # DAC Player Memory - DACs will play this waveform
-            print("Inside the dac_player setup block for stable overlay")
             self.dac_player = self.memdict_to_view("hier_dac_play/axi_bram_ctrl_0")
             self.dac_player2 = self.memdict_to_view("hier_dac_play1/axi_bram_ctrl_0")
     
