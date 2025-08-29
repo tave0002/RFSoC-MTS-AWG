@@ -80,6 +80,8 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
   
   //burst size parameters
   reg [3:0] arsizeVal;
+  wire [7:0] burstSizeByte;
+  assign burstSizeByte = DWIDTH/8;
   assign M_AXI_DDR4_arsize[0] = arsizeVal[0];  
   assign M_AXI_DDR4_arsize[1] = arsizeVal[1];
   assign M_AXI_DDR4_arsize[2] = arsizeVal[2];
@@ -92,7 +94,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
 
   initial begin
     baseAddress <= START_ADDR;
-    ramAddressLimit <= START_ADDR + (MEM_SIZE_kBYTES*1024) - (8'64)*(DWIDTH/8); #64 is the burst length
+    ramAddressLimit <= START_ADDR + (MEM_SIZE_kBYTES*1024) - (64)*(DWIDTH/8);//#64 is the burst length
     M_AXI_DDR4_araddr <= START_ADDR; //initialise it at the starting address
     M_AXI_DDR4_arvalid <= 0;
     axis_tdata <= 0;
@@ -102,14 +104,14 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
     fullCounter <= 0;
     burstSetting <= 2'b01;
     //below computes the log2(dwidth/8) since we know dwidth is always a power of 2
-    arsizeVal[0] <= 8'(DWIDTH/8)[1] | 8'(DWIDTH/8)[3] | 8'(DWIDTH/8)[5] | 8'(DWIDTH/8)[7];
-    arsizeVal[1] <= 8'(DWIDTH/8)[2] | 8'(DWIDTH/8)[3] | 8'(DWIDTH/8)[6] | 8'(DWIDTH/8)[7];
-    arsizeVal[2] <= 8'(DWIDTH/8)[4] | 8'(DWIDTH/8)[5] | 8'(DWIDTH/8)[6] | 8'(DWIDTH/8)[7];
-    incrimentAddress <= (M_AXI_DDR4_arlen+1)*(DWIDTH/8)
+    arsizeVal[0] <= burstSizeByte[1] | burstSizeByte[3] | burstSizeByte[5] | burstSizeByte[7];
+    arsizeVal[1] <= burstSizeByte[2] | burstSizeByte[3] | burstSizeByte[6] | burstSizeByte[7];
+    arsizeVal[2] <= burstSizeByte[4] | burstSizeByte[5] | burstSizeByte[6] | burstSizeByte[7];
+    incrimentAddress <= (M_AXI_DDR4_arlen+1)*(DWIDTH/8);
   end
     
 
-  always @(posedge m_axi_aclk) begin //done this way since the AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
+  always @(posedge m_axi_clk) begin //done this way since the AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
     if (~s_axi_aresetn) begin
   	  M_AXI_DDR4_araddr <= baseAddress;
       M_AXI_DDR4_arvalid <= 0;
