@@ -49,18 +49,14 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI_DDR4 RREADY" *)
   output reg M_AXI_DDR4_rready, // Read ready (optional)
-  
-  (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 axis_clk CLK" *)
-  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF AXIS, ASSOCIATED_RESET axis_aresetn" *)
-  input wire axis_clk,
  
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 m_axi_aclk CLK" *)
-  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF M_AXI_DDR4, ASSOCIATED_RESET axis_aresetn" *)
+  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF M_AXI_DDR4:axis, ASSOCIATED_RESET s_axi_aresetn" *)
   input m_axi_clk, 
   
-  (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 axis_aresetn RST" *)
-  //The rest of the axis ports are automatically infered by vivado
-  input  wire              axis_aresetn,
+  (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 s_axi_aresetn RST" *)
+  input  wire              s_axi_aresetn,
+  //rest of axis is infered from this
   output reg  [DWIDTH-1:0] axis_tdata,       
   input  wire              axis_tready,
   output reg               axis_tvalid,
@@ -70,40 +66,51 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
   );
 
   //memory parameters
-  wire [ADDR_WIDTH-1:0] baseAddress;
-  wire [ADDR_WIDTH-1:0] ramAddressLimit;
-  assign baseAddress = START_ADDR; 
-  assign ramAddressLimit = baseAddress + (MEM_SIZE_kBYTES*1024) - (M_AXI_DDR4_arlen+1)*(DWIDTH/8); //want the limit to be the final memory address read before wrap around, not the actual last element in memory
-  assign M_AXI_DDR4_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
-  assign M_AXI_DDR4_arlen = 8'd63; //Not using max possible burst size since this would overrun the 4KB memory guards 
-   //WARNING: this breaks AXI4 protocol since this results in the output being combinationally dependent on the input. However for now I will leave it since this way the actual important signal is passed directly along so no clock edge delay but doesn't stay on if disabled. Once I've done a timing analysis this may change, if I have to change it, will need to make use of the almost full flag on the FIFO and feed that into the dacramstreamer
+  reg [ADDR_WIDTH-1:0] baseAddress;
+  reg [ADDR_WIDTH-1:0] ramAddressLimit;
+  reg [DWIDTH-1:0] dataRegister;
+  integer incrimentAddress;
+  
+  //burst parameters
+  reg [7:0] burstLength;
+  reg [1:0] burstSetting;
+  assign M_AXI_DDR4_arburst = burstSetting; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
+  assign M_AXI_DDR4_arlen = burstLength; //Not using max possible burst size since this would overrun the 4KB memory guards 
 
-  //burst legth parameters
-  wire [8:0] dWidthByte;
-  assign dWidthByte=DWIDTH/8; //data width in bytes
-  //below should be laking log2(dWidthByte), note the below commands only work because the input value will only every be a power of 2
-  assign M_AXI_DDR4_arsize[0] = dWidthByte[1]|dWidthByte[3]|dWidthByte[5]|dWidthByte[7];  //Sets the data transfer width to 512 bits, this line and below gives you log2 of the DWIDTH param (since it also is only powers of 2 in bytes which is how the arsize param has to be formatted 
-  assign M_AXI_DDR4_arsize[1] = dWidthByte[2]|dWidthByte[3]|dWidthByte[6]|dWidthByte[7];
-  assign M_AXI_DDR4_arsize[2] = dWidthByte[4]|dWidthByte[5]|dWidthByte[6]|dWidthByte[7];
+  
+  //burst size parameters
+  reg [3:0] arsizeVal;
+  assign M_AXI_DDR4_arsize[0] = arsizeVal[0];  
+  assign M_AXI_DDR4_arsize[1] = arsizeVal[1];
+  assign M_AXI_DDR4_arsize[2] = arsizeVal[2];
 
   //misc parameters
   reg startFlag; //used to set arvalid again once reset or ~enable is deasserted
   reg rlastFlag; //set high when rlast goes high, prevents several memory address jumps, 0 means rlast has noit been asserted, 1 means has been
   integer fullCounter;
+  
 
   initial begin
-    M_AXI_DDR4_araddr = baseAddress; //initialise it at the starting address
-    M_AXI_DDR4_arvalid = 0;
-    axis_tdata = 0;
-    axis_tvalid = 0;
-    startFlag = 1;
-    rlastFlag = 0; 
-    fullCounter = 0;
+    baseAddress <= START_ADDR;
+    ramAddressLimit <= START_ADDR + (MEM_SIZE_kBYTES*1024) - (8'64)*(DWIDTH/8); #64 is the burst length
+    M_AXI_DDR4_araddr <= START_ADDR; //initialise it at the starting address
+    M_AXI_DDR4_arvalid <= 0;
+    axis_tdata <= 0;
+    axis_tvalid <= 0;
+    startFlag <= 1;
+    rlastFlag <= 0; 
+    fullCounter <= 0;
+    burstSetting <= 2'b01;
+    //below computes the log2(dwidth/8) since we know dwidth is always a power of 2
+    arsizeVal[0] <= 8'(DWIDTH/8)[1] | 8'(DWIDTH/8)[3] | 8'(DWIDTH/8)[5] | 8'(DWIDTH/8)[7];
+    arsizeVal[1] <= 8'(DWIDTH/8)[2] | 8'(DWIDTH/8)[3] | 8'(DWIDTH/8)[6] | 8'(DWIDTH/8)[7];
+    arsizeVal[2] <= 8'(DWIDTH/8)[4] | 8'(DWIDTH/8)[5] | 8'(DWIDTH/8)[6] | 8'(DWIDTH/8)[7];
+    incrimentAddress <= (M_AXI_DDR4_arlen+1)*(DWIDTH/8)
   end
     
 
-  always @(posedge axis_clk) begin //done this way since the AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
-    if (~axis_aresetn) begin
+  always @(posedge m_axi_aclk) begin //done this way since the AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
+    if (~s_axi_aresetn) begin
   	  M_AXI_DDR4_araddr <= baseAddress;
       M_AXI_DDR4_arvalid <= 0;
       axis_tdata <= 0;
@@ -138,7 +145,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
           if (M_AXI_DDR4_araddr >= ramAddressLimit) begin 
 		        M_AXI_DDR4_araddr <= baseAddress;
           end else begin
-            M_AXI_DDR4_araddr <= M_AXI_DDR4_araddr + (M_AXI_DDR4_arlen+1)*dWidthByte;
+            M_AXI_DDR4_araddr <= M_AXI_DDR4_araddr + incrimentAddress;
           end
           M_AXI_DDR4_arvalid <= 1'b1; 
           rlastFlag <= 1;
@@ -148,7 +155,8 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
 
         //Place rdata on the axis data bus when a read is in progress
         if((M_AXI_DDR4_rready | (fullCounter===1 & M_AXI_DDR4_rlast)) & M_AXI_DDR4_rvalid) begin //this is really dodgy, again need to fix
-          axis_tdata <= M_AXI_DDR4_rdata;
+          dataRegister <= M_AXI_DDR4_rdata;
+          axis_tdata <= dataRegister;
           axis_tvalid<=1;
         end else begin
           axis_tvalid<=0;
