@@ -103,11 +103,13 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
     rlastFlag <= 0; 
     fullCounter <= 0;
     burstSetting <= 2'b01;
+    burstLength <= 8'd63
     //below computes the log2(dwidth/8) since we know dwidth is always a power of 2
     arsizeVal[0] <= burstSizeByte[1] | burstSizeByte[3] | burstSizeByte[5] | burstSizeByte[7];
     arsizeVal[1] <= burstSizeByte[2] | burstSizeByte[3] | burstSizeByte[6] | burstSizeByte[7];
     arsizeVal[2] <= burstSizeByte[4] | burstSizeByte[5] | burstSizeByte[6] | burstSizeByte[7];
-    incrimentAddress <= (M_AXI_DDR4_arlen+1)*(DWIDTH/8);
+    incrimentAddress <= 64*(DWIDTH/8);
+    dataRegister <= 0;
   end
     
 
@@ -120,6 +122,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
       startFlag <= 1;
       M_AXI_DDR4_rready <= 0;
       rlastFlag <= 0;
+      dataRegister <= 0;
   	end else begin 
       if (enable | (M_AXI_DDR4_rready & M_AXI_DDR4_rvalid)) begin //ensures if enable is turned off then the transaction finishes
         M_AXI_DDR4_rready <= axis_tready & (~fifo_almost_full)  ; //determin if it is ready to read a value by confirming that the FIFO isn't almost full and that it is actually ready to receive values 
@@ -178,6 +181,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
         startFlag <= 1;
         M_AXI_DDR4_rready <= 0;
         rlastFlag <= 0;
+        dataRegister <= 0;
   	  end
   end
 end
