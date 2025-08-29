@@ -54,10 +54,10 @@ class mtsOverlay(Overlay):
         if version=="stable":
             self.stableFlag=1
         elif version=="dev":
-            self.stableFlag==0
+            self.stableFlag=0
         else:
             assert False, "version spesified isn't an option. Please use 'stable' for functional version or 'dev' for DDR4 testing"
-        
+        print(f"Stable flag is set as {self.stableFlag}")
         if b'zocl' in output:
             # If present, remove the module using rmmod command
             rmmod_output = subprocess.run(['rmmod', 'zocl'])
