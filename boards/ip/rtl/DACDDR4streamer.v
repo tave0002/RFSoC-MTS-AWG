@@ -1,4 +1,4 @@
-//IP Name: DACDDR$streamer
+//IP Name: DACDDR4streamer
 //Original Authors:
   // -------------------------------------------------------------------------------------------------
   // Copyright (C) 2023 Advanced Micro Devices, Inc
@@ -88,14 +88,17 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
 
   //misc parameters
   reg startFlag; //used to set arvalid again once reset or ~enable is deasserted
-
+  reg rlastFlag; //set high when rlast goes high, prevents several memory address jumps, 0 means rlast has noit been asserted, 1 means has been
+  integer fullCounter;
 
   initial begin
     M_AXI_DDR4_araddr = baseAddress; //initialise it at the starting address
     M_AXI_DDR4_arvalid = 0;
-    axis_tdata=0;
-    axis_tvalid=0;
-    startFlag=1;
+    axis_tdata = 0;
+    axis_tvalid = 0;
+    startFlag = 1;
+    rlastFlag = 0; 
+    fullCounter = 0;
   end
     
 
@@ -107,9 +110,10 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
       axis_tvalid<=0;
       startFlag <= 1;
       M_AXI_DDR4_rready <= 0;
+      rlastFlag <= 0;
   	end else begin 
       if (enable | (M_AXI_DDR4_rready & M_AXI_DDR4_rvalid)) begin //ensures if enable is turned off then the transaction finishes
-        M_AXI_DDR4_rready <= axis_tready & (~fifo_almost_full); //determin if it is ready to read a value by confirming that the FIFO isn't almost full and that it is actually ready to receive values 
+        M_AXI_DDR4_rready <= axis_tready & (~fifo_almost_full)  ; //determin if it is ready to read a value by confirming that the FIFO isn't almost full and that it is actually ready to receive values 
         
         //set arvalid high to begin the transactions
         if (startFlag & enable) begin
@@ -117,23 +121,33 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
           startFlag <= 0;
         end
         
+        //check if the fifo almost full flag is high. This handles a very spesific edge case when fifo_almost_full goes high 1 clock cycle before rlast, this is a very bodge fix. Need to come up with something better
+        if(fifo_almost_full) begin
+          fullCounter <= fullCounter + 1;
+        end else begin
+          fullCounter <= 0;
+        end
+
         //Ensures once the address is read the arvalid is set low in accordance with axi-4 protocol
         if(M_AXI_DDR4_arready & M_AXI_DDR4_arvalid) begin 
           M_AXI_DDR4_arvalid <= 1'b0;
         end 
 
         //Loading in the new address once current burst is complete
-        if(M_AXI_DDR4_rlast & enable) begin 
-          if (M_AXI_DDR4_araddr >= ramAddressLimit) begin //functionality of this not yet tested, should set the ramAddressLimit low for a testbench and test the wrap around works as intended
+        if(M_AXI_DDR4_rlast & enable & ~rlastFlag) begin 
+          if (M_AXI_DDR4_araddr >= ramAddressLimit) begin 
 		        M_AXI_DDR4_araddr <= baseAddress;
           end else begin
             M_AXI_DDR4_araddr <= M_AXI_DDR4_araddr + (M_AXI_DDR4_arlen+1)*dWidthByte;
           end
           M_AXI_DDR4_arvalid <= 1'b1; 
-		    end
+          rlastFlag <= 1;
+        end else if (~M_AXI_DDR4_rlast) begin
+          rlastFlag <= 0;
+        end
 
         //Place rdata on the axis data bus when a read is in progress
-        if(M_AXI_DDR4_rready & M_AXI_DDR4_rvalid) begin 
+        if((M_AXI_DDR4_rready | (fullCounter===1 & M_AXI_DDR4_rlast)) & M_AXI_DDR4_rvalid) begin //this is really dodgy, again need to fix
           axis_tdata <= M_AXI_DDR4_rdata;
           axis_tvalid<=1;
         end else begin
@@ -151,9 +165,9 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
         M_AXI_DDR4_araddr <= baseAddress;
         M_AXI_DDR4_arvalid <= 0;
         axis_tvalid<=0;
-        axis_tdata<=0;
         startFlag <= 1;
         M_AXI_DDR4_rready <= 0;
+        rlastFlag <= 0;
   	  end
   end
 end
