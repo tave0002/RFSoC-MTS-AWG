@@ -51,11 +51,11 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
   output reg M_AXI_rready, // Read ready (optional)
  
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 m_axi_aclk CLK" *)
-  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF M_AXI:M_AXIS, ASSOCIATED_RESET s_axi_aresetn" *)
+  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF M_AXI:M_AXIS, ASSOCIATED_RESET m_axi_aresetn" *)
   input m_axi_clk, 
   
-  (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 s_axi_aresetn RST" *)
-  input  wire              s_axi_aresetn,
+  (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 m_axi_aresetn RST" *)
+  input  wire              m_axi_aresetn,
   //rest of M_AXIS is infered from this
   output reg  [DWIDTH-1:0] M_AXIS_tdata,       
   input  wire              M_AXIS_tready,
@@ -114,7 +114,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
     
 
   always @(posedge m_axi_clk) begin //done this way since the M_AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
-    if (~s_axi_aresetn) begin
+    if (~m_axi_aresetn) begin
   	  M_AXI_araddr <= baseAddress;
       M_AXI_arvalid <= 0;
       M_AXIS_tdata <= 0;
