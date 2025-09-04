@@ -50,41 +50,37 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI RREADY" *)
   output reg M_AXI_rready, // Read ready (optional)
  
-  (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 m_axi_aclk CLK" *)
-  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF M_AXI:M_AXIS, ASSOCIATED_RESET m_axi_aresetn" *)
-  input m_axi_clk, 
+  (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 aclk CLK" *)
+  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF M_AXI:M_AXIS, ASSOCIATED_RESET aresetn" *)
+  input wire aclk, 
   
-  (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 m_axi_aresetn RST" *)
-  input  wire              m_axi_aresetn,
+  (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 aresetn RST" *)
+  input wire aresetn,
   //rest of M_AXIS is infered from this
-  output reg  [DWIDTH-1:0] M_AXIS_tdata,       
-  input  wire              M_AXIS_tready,
-  output reg               M_AXIS_tvalid,
+  output reg [DWIDTH-1:0] M_AXIS_tdata,       
+  input  wire M_AXIS_tready,
+  output reg M_AXIS_tvalid,
   
   input wire enable, //a user controlled input that allows the user to suspend the data transaction and update the memory 
   input wire fifo_almost_full
   );
 
   //memory parameters
-  reg [ADDR_WIDTH-1:0] baseAddress;
   reg [ADDR_WIDTH-1:0] ramAddressLimit;
   reg [DWIDTH-1:0] dataRegister;
   integer incrimentAddress;
   
   //burst parameters
-  reg [7:0] burstLength;
-  reg [1:0] burstSetting;
-  assign M_AXI_arburst = burstSetting; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
-  assign M_AXI_arlen = burstLength; //Not using max possible burst size since this would overrun the 4KB memory guards 
+  assign M_AXI_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
+  assign M_AXI_arlen = burs8'd63tLength; //Not using max possible burst size since this would overrun the 4KB memory guards 
 
   
   //burst size parameters
-  reg [3:0] arsizeVal;
   wire [7:0] burstSizeByte;
   assign burstSizeByte = DWIDTH/8;
-  assign M_AXI_arsize[0] = arsizeVal[0];  
-  assign M_AXI_arsize[1] = arsizeVal[1];
-  assign M_AXI_arsize[2] = arsizeVal[2];
+  assign M_AXI_arsize[0] = burstSizeByte[1] | burstSizeByte[3] | burstSizeByte[5] | burstSizeByte[7];  
+  assign M_AXI_arsize[1] = burstSizeByte[2] | burstSizeByte[3] | burstSizeByte[6] | burstSizeByte[7];
+  assign M_AXI_arsize[2] = burstSizeByte[4] | burstSizeByte[5] | burstSizeByte[6] | burstSizeByte[7];
 
   //misc parameters
   reg startFlag; //used to set arvalid again once reset or ~enable is deasserted
@@ -93,8 +89,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
   
 
   initial begin
-    baseAddress <= START_ADDR;
-    ramAddressLimit <= START_ADDR + (MEM_SIZE_kBYTES*1024) - (64)*(DWIDTH/8);//#64 is the burst length
+    ramAddressLimit <= START_ADDR + (MEM_SIZE_kBYTES*1024) - (8*DWIDTH);//full expression is 64*DWIDTH/8 but this simplifies things
     M_AXI_araddr <= START_ADDR; //initialise it at the starting address
     M_AXI_arvalid <= 0;
     M_AXIS_tdata <= 0;
@@ -102,20 +97,14 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
     startFlag <= 1;
     rlastFlag <= 0; 
     fullCounter <= 0;
-    burstSetting <= 2'b01;
-    burstLength <= 8'd63;
-    //below computes the log2(dwidth/8) since we know dwidth is always a power of 2
-    arsizeVal[0] <= burstSizeByte[1] | burstSizeByte[3] | burstSizeByte[5] | burstSizeByte[7];
-    arsizeVal[1] <= burstSizeByte[2] | burstSizeByte[3] | burstSizeByte[6] | burstSizeByte[7];
-    arsizeVal[2] <= burstSizeByte[4] | burstSizeByte[5] | burstSizeByte[6] | burstSizeByte[7];
-    incrimentAddress <= 64*(DWIDTH/8);
+    incrimentAddress <= 8*DWIDTH; //again this is meant to be 64*DWIDTH/8 but the actual expression is more simple
     dataRegister <= 0;
   end
     
 
-  always @(posedge m_axi_clk) begin //done this way since the M_AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
-    if (~m_axi_aresetn) begin
-  	  M_AXI_araddr <= baseAddress;
+  always @(posedge aclk) begin //done this way since the M_AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
+    if (~aresetn | ~enable | ~(M_AXI_rready & M_AXI_rvalid)) begin
+  	  M_AXI_araddr <= START_ADDR;
       M_AXI_arvalid <= 0;
       M_AXIS_tdata <= 0;
       M_AXIS_tvalid<=0;
@@ -124,7 +113,6 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
       rlastFlag <= 0;
       dataRegister <= 0;
   	end else begin 
-      if (enable | (M_AXI_rready & M_AXI_rvalid)) begin //ensures if enable is turned off then the transaction finishes
         M_AXI_rready <= M_AXIS_tready & (~fifo_almost_full)  ; //determin if it is ready to read a value by confirming that the FIFO isn't almost full and that it is actually ready to receive values 
         
         //set arvalid high to begin the transactions
@@ -148,7 +136,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
         //Loading in the new address once current burst is complete
         if(M_AXI_rlast & enable & ~rlastFlag) begin 
           if (M_AXI_araddr >= ramAddressLimit) begin 
-		        M_AXI_araddr <= baseAddress;
+		        M_AXI_araddr <= START_ADDR;
           end else begin
             M_AXI_araddr <= M_AXI_araddr + incrimentAddress;
           end
@@ -169,20 +157,9 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
         
         //If the transaction is still in progress, will finish but setting arvalid low ensures a new one won't start
         if(~enable) begin 
-          M_AXI_araddr <= baseAddress;
+          M_AXI_araddr <= START_ADDR;
           M_AXI_arvalid <=0;
         end
-
-      //enable low and no transaction in progress
-      end else begin
-        M_AXI_araddr <= baseAddress;
-        M_AXI_arvalid <= 0;
-        M_AXIS_tvalid<=0;
-        startFlag <= 1;
-        M_AXI_rready <= 0;
-        rlastFlag <= 0;
-        dataRegister <= 0;
-  	  end
   end
 end
 endmodule
