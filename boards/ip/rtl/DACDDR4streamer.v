@@ -45,7 +45,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
   input M_AXI_rlast, // Read last beat (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI RVALID" *)
-  input M_AXI_rvalid, // Read valid (optional)
+  input wire M_AXI_rvalid, // Read valid (optional)
   
   (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI RREADY" *)
   output reg M_AXI_rready, // Read ready (optional)
@@ -99,6 +99,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
     fullCounter <= 0;
     incrimentAddress <= 8*DWIDTH; //again this is meant to be 64*DWIDTH/8 but the actual expression is more simple
     dataRegister <= 0;
+    M_AXI_rready <= 0;
   end
     
 
