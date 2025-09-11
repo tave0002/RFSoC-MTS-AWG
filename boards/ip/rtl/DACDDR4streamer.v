@@ -72,7 +72,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
   
   //burst parameters
   assign M_AXI_arburst = 2'b01; //this is a parameter, setting it to 1 results in incrimental burst (e.g. moves to the next memory address for each burst transfer)
-  assign M_AXI_arlen = burs8'd63tLength; //Not using max possible burst size since this would overrun the 4KB memory guards 
+  assign M_AXI_arlen = 8'd63; //Not using max possible burst size since this would overrun the 4KB memory guards 
 
   
   //burst size parameters
@@ -103,7 +103,7 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
     
 
   always @(posedge aclk) begin //done this way since the M_AXIS and AXI bus run at the same speed and both are referenced to the DDR4 clock
-    if (~aresetn | ~enable | ~(M_AXI_rready & M_AXI_rvalid)) begin
+    if (~aresetn) begin
   	  M_AXI_araddr <= START_ADDR;
       M_AXI_arvalid <= 0;
       M_AXIS_tdata <= 0;
@@ -113,52 +113,61 @@ module DACDDR4streamer #( parameter DWIDTH = 512, parameter MEM_SIZE_kBYTES = 52
       rlastFlag <= 0;
       dataRegister <= 0;
   	end else begin 
-        M_AXI_rready <= M_AXIS_tready & (~fifo_almost_full)  ; //determin if it is ready to read a value by confirming that the FIFO isn't almost full and that it is actually ready to receive values 
-        
-        //set arvalid high to begin the transactions
-        if (startFlag & enable) begin
-          M_AXI_arvalid <= 1;
-          startFlag <= 0;
-        end
-        
-        //check if the fifo almost full flag is high. This handles a very spesific edge case when fifo_almost_full goes high 1 clock cycle before rlast, this is a very bodge fix. Need to come up with something better
-        if(fifo_almost_full) begin
-          fullCounter <= fullCounter + 1;
-        end else begin
-          fullCounter <= 0;
-        end
+        if(enable | (M_AXI_rready & M_AXI_rvalid)) begin
+          M_AXI_rready <= M_AXIS_tready & (~fifo_almost_full)  ; //determin if it is ready to read a value by confirming that the FIFO isn't almost full and that it is actually ready to receive values 
 
-        //Ensures once the address is read the arvalid is set low in accordance with axi-4 protocol
-        if(M_AXI_arready & M_AXI_arvalid) begin 
-          M_AXI_arvalid <= 1'b0;
-        end 
-
-        //Loading in the new address once current burst is complete
-        if(M_AXI_rlast & enable & ~rlastFlag) begin 
-          if (M_AXI_araddr >= ramAddressLimit) begin 
-		        M_AXI_araddr <= START_ADDR;
-          end else begin
-            M_AXI_araddr <= M_AXI_araddr + incrimentAddress;
+          //set arvalid high to begin the transactions
+          if (startFlag & enable) begin
+            M_AXI_arvalid <= 1;
+            startFlag <= 0;
           end
-          M_AXI_arvalid <= 1'b1; 
-          rlastFlag <= 1;
-        end else if (~M_AXI_rlast) begin
-          rlastFlag <= 0;
-        end
 
-        //Place rdata on the M_AXIS data bus when a read is in progress
-        if((M_AXI_rready | (fullCounter===1 & M_AXI_rlast)) & M_AXI_rvalid) begin //this is really dodgy, again need to fix
-          dataRegister <= M_AXI_rdata;
-          M_AXIS_tdata <= dataRegister;
-          M_AXIS_tvalid<=1;
+          //check if the fifo almost full flag is high. This handles a very spesific edge case when fifo_almost_full goes high 1 clock cycle before rlast, this is a very bodge fix. Need to come up with something better
+          if(fifo_almost_full) begin
+            fullCounter <= fullCounter + 1;
+          end else begin
+            fullCounter <= 0;
+          end
+
+          //Ensures once the address is read the arvalid is set low in accordance with axi-4 protocol
+          if(M_AXI_arready & M_AXI_arvalid) begin 
+            M_AXI_arvalid <= 1'b0;
+          end 
+
+          //Loading in the new address once current burst is complete
+          if(M_AXI_rlast & enable & ~rlastFlag) begin 
+            if (M_AXI_araddr >= ramAddressLimit) begin 
+		          M_AXI_araddr <= START_ADDR;
+            end else begin
+              M_AXI_araddr <= M_AXI_araddr + incrimentAddress;
+            end
+            M_AXI_arvalid <= 1'b1; 
+            rlastFlag <= 1;
+          end else if (~M_AXI_rlast) begin
+            rlastFlag <= 0;
+          end
+
+          //Place rdata on the M_AXIS data bus when a read is in progress
+          if((M_AXI_rready | (fullCounter===1 & M_AXI_rlast)) & M_AXI_rvalid) begin //this is really dodgy, again need to fix
+            dataRegister <= M_AXI_rdata;
+            M_AXIS_tdata <= dataRegister;
+            M_AXIS_tvalid<=1;
+          end else begin
+            M_AXIS_tvalid<=0;
+          end
+
+          //If the transaction is still in progress, will finish but setting arvalid low ensures a new one won't start
+          if(~enable) begin 
+            M_AXI_araddr <= START_ADDR;
+            M_AXI_arvalid <=0;
+          end
         end else begin
-          M_AXIS_tvalid<=0;
-        end
-        
-        //If the transaction is still in progress, will finish but setting arvalid low ensures a new one won't start
-        if(~enable) begin 
           M_AXI_araddr <= START_ADDR;
-          M_AXI_arvalid <=0;
+          M_AXI_arvalid <= 0;
+          M_AXIS_tvalid<=0;
+          startFlag <= 1;
+          M_AXI_rready <= 0;
+          rlastFlag <= 0;
         end
   end
 end
